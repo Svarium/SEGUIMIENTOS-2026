@@ -51,7 +51,7 @@ function AuthGate({ children }) {
     return (
       <div style={styles.fullscreen}>
         <div style={styles.card}>
-          <h1 style={styles.title}>App Seguimientos 2026</h1>
+          <h1 style={styles.title}>Seguimientos DH-Schools 👩‍💻</h1>
           <p style={styles.subtitle}>
             Iniciá sesión con tu cuenta de Google para continuar.
           </p>
@@ -67,7 +67,7 @@ function AuthGate({ children }) {
     <div style={styles.appShell}>
       <header style={styles.header}>
         <div>
-          <span style={styles.appName}>App Seguimientos 2026</span>
+          <span style={styles.appName}>DH-Schools 👩‍💻</span>
         </div>
         <div style={styles.userSection}>
           {user.photoURL && (
