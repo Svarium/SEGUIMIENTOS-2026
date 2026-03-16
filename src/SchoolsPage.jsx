@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import toast from "react-hot-toast";
 import Modal from "./Modal";
+import Dashboard from "./components/Dashboard";
 
 const SYSTEM_OPTIONS = [
   "Argentina Nativa",
@@ -484,6 +485,7 @@ function SchoolsPage() {
       await updateDoc(schoolRef, {
         lastSnapshotRisk: snapshotRisk,
         lastSnapshotAt: serverTimestamp(),
+        lastSnapshotSummary: summary,
       });
 
       toast.success("Snapshot guardado.");
@@ -545,6 +547,8 @@ function SchoolsPage() {
           Agregar colegio
         </button>
       </div>
+
+      <Dashboard schools={schools} />
 
       <section className="schools-grid">
         {loading ? (
