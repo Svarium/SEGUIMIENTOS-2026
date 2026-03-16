@@ -6,6 +6,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from "./firebase";
+import { NavLink } from "react-router-dom";
 
 function AuthGate({ children }) {
   const [user, setUser] = useState(null);
@@ -66,8 +67,22 @@ function AuthGate({ children }) {
   return (
     <div style={styles.appShell}>
       <header style={styles.header}>
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
           <span style={styles.appName}>DH-Schools 👩‍💻</span>
+          <nav style={styles.navLinks}>
+            <NavLink 
+              to="/schools" 
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              Colegios
+            </NavLink>
+            <NavLink 
+              to="/evolution" 
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              Tendencias
+            </NavLink>
+          </nav>
         </div>
         <div style={styles.userSection}>
           {user.photoURL && (
