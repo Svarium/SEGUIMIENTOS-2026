@@ -19,6 +19,136 @@
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.9);
 }
 
+.schools-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .schools-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.schools-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.schools-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: #e5e7eb;
+  margin-bottom: 0.25rem;
+}
+
+.school-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-row-inline {
+  flex-direction: row;
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .form-row-inline {
+    flex-direction: column;
+  }
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.form-input {
+  background-color: #020617;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0.55rem 0.75rem;
+  color: #e5e7eb;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.5);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #22d3ee 0%, #6366f1 50%, #ec4899 100%);
+  border: none;
+  border-radius: 999px;
+  padding: 0.5rem 1.4rem;
+  color: #0b1120;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+}
+
+.primary-button:disabled {
+  opacity: 0.7;
+  cursor: default;
+  box-shadow: none;
+}
+
+.schools-table {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background-color: rgba(15, 23, 42, 0.9);
+  overflow: hidden;
+  font-size: 0.85rem;
+}
+
+.schools-table-header,
+.schools-table-row {
+  display: grid;
+  grid-template-columns: 1.8fr 0.8fr 0.9fr 1fr;
+  gap: 0.75rem;
+  padding: 0.55rem 0.9rem;
+}
+
+.schools-table-header {
+  background-color: rgba(15, 23, 42, 1);
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.schools-table-row:nth-child(odd) {
+  background-color: rgba(15, 23, 42, 0.9);
+}
+
+.schools-table-row:nth-child(even) {
+  background-color: rgba(15, 23, 42, 0.8);
+}
+
 .app-title {
   font-size: 1.4rem;
   margin-bottom: 0.75rem;
