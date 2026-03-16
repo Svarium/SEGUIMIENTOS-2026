@@ -70,6 +70,14 @@ function AuthGate({ children }) {
           <span style={styles.appName}>App Seguimientos 2026</span>
         </div>
         <div style={styles.userSection}>
+          {user.photoURL && (
+            <img 
+              src={user.photoURL} 
+              alt="Perfil" 
+              style={styles.userAvatar} 
+              title={user.email}
+            />
+          )}
           <span style={styles.userEmail}>{user.email}</span>
           <button style={styles.smallButton} onClick={handleLogout}>
             Cerrar sesión
@@ -161,6 +169,13 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "0.75rem",
+  },
+  userAvatar: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    objectFit: "cover",
+    border: "2px solid rgba(148, 163, 184, 0.4)",
   },
   userEmail: {
     fontSize: "0.85rem",

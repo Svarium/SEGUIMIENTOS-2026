@@ -10,6 +10,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  getDocs,
 } from "firebase/firestore";
 import toast from "react-hot-toast";
 import Modal from "./Modal";
@@ -49,6 +50,7 @@ function SchoolsPage() {
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const [contacts, setContacts] = useState([]);
@@ -84,6 +86,7 @@ function SchoolsPage() {
   const [snapshotRisk, setSnapshotRisk] = useState("medio");
   const [groupStatuses, setGroupStatuses] = useState({});
   const [snapshotMode, setSnapshotMode] = useState("create"); // "create" | "view"
+  const [confirmDeleteSnapshotId, setConfirmDeleteSnapshotId] = useState(null);
 
   useEffect(() => {
     const colRef = collection(db, "schools");
@@ -130,6 +133,16 @@ function SchoolsPage() {
     });
     setEditingContactId(null);
     setConfirmDeleteContactId(null);
+  };
+
+  const handleOpenContactModal = () => {
+    resetContactForm();
+    setShowContactModal(true);
+  };
+
+  const handleCloseContactModal = () => {
+    setShowContactModal(false);
+    resetContactForm();
   };
 
   const handleSubmit = async (event) => {
@@ -182,11 +195,13 @@ function SchoolsPage() {
   const handleCloseModals = () => {
     setShowCreateModal(false);
     setShowDetailModal(false);
+    setShowContactModal(false);
     setSelectedSchool(null);
     setConfirmingDelete(false);
     setContacts([]);
     setContactsLoading(false);
     resetContactForm();
+    setConfirmDeleteSnapshotId(null);
   };
 
   useEffect(() => {
@@ -247,9 +262,33 @@ function SchoolsPage() {
     if (!selectedSchool) return;
 
     try {
-      const ref = doc(db, "schools", selectedSchool.id);
-      await deleteDoc(ref);
-      toast.success("Colegio eliminado.");
+      // Usar toast.promise si lo prefieres, pero un toast estático para dar feedback sirve
+      const toastId = toast.loading("Eliminando colegio y sus datos...");
+      
+      const schoolRef = doc(db, "schools", selectedSchool.id);
+      
+      // Obtener y eliminar todos los contactos
+      const contactsRef = collection(db, "schools", selectedSchool.id, "contacts");
+      const contactsSnap = await getDocs(contactsRef);
+      const deletePromises = [];
+      contactsSnap.forEach((docSnap) => {
+        deletePromises.push(deleteDoc(docSnap.ref));
+      });
+
+      // Obtener y eliminar todos los snapshots
+      const snapshotsRef = collection(db, "schools", selectedSchool.id, "snapshots");
+      const snapshotsSnap = await getDocs(snapshotsRef);
+      snapshotsSnap.forEach((docSnap) => {
+        deletePromises.push(deleteDoc(docSnap.ref));
+      });
+
+      // Ejecutar borrados en paralelo
+      await Promise.all(deletePromises);
+      
+      // Borrar el colegio padre
+      await deleteDoc(schoolRef);
+
+      toast.success("Colegio y todos sus datos eliminados.", { id: toastId });
       handleCloseModals();
     } catch (error) {
       console.error("Error al eliminar colegio:", error);
@@ -300,6 +339,7 @@ function SchoolsPage() {
         toast.success("Contacto creado.");
       }
 
+      setShowContactModal(false);
       resetContactForm();
     } catch (error) {
       console.error("Error al guardar contacto:", error);
@@ -323,6 +363,7 @@ function SchoolsPage() {
           ? true
           : !!contact.teaches,
     });
+    setShowContactModal(true);
   };
 
   const handleDeleteContact = async (contactId) => {
@@ -349,6 +390,7 @@ function SchoolsPage() {
     setSnapshotComments("");
     setSnapshotRisk("medio");
     setGroupStatuses({});
+    setConfirmDeleteSnapshotId(null);
     setShowSnapshotModal(true);
   };
 
@@ -468,7 +510,21 @@ function SchoolsPage() {
     setSnapshotComments(snapshot.comments || "");
     setSnapshotRisk(snapshot.riskLevel || "medio");
     setGroupStatuses({});
+    setConfirmDeleteSnapshotId(null);
     setShowSnapshotModal(true);
+  };
+
+  const handleDeleteSnapshot = async (snapshotId) => {
+    if (!selectedSchool?.id) return;
+    try {
+      const ref = doc(db, "schools", selectedSchool.id, "snapshots", snapshotId);
+      await deleteDoc(ref);
+      toast.success("Snapshot eliminado.");
+      setConfirmDeleteSnapshotId(null);
+    } catch (error) {
+      console.error("Error al eliminar snapshot:", error);
+      toast.error("No se pudo eliminar el snapshot.");
+    }
   };
 
   return (
@@ -696,227 +752,20 @@ function SchoolsPage() {
               </div>
             </div>
 
+            {/* SECOND SECTION: CONTACTS */}
             <div className="school-detail-section">
-              <div className="snapshots-header-row">
-                <h4 className="section-title">Snapshots del reporte</h4>
+              <div className="contacts-header-row">
+                <h4 className="section-title" style={{ margin: 0 }}>Docentes y contactos</h4>
                 <button
                   type="button"
                   className="primary-button"
-                  onClick={handleOpenSnapshotModal}
+                  onClick={handleOpenContactModal}
                 >
-                  Nuevo snapshot desde reporte
+                  Nuevo contacto
                 </button>
               </div>
-              {snapshotsLoading ? (
-                <p className="app-text-muted">Cargando snapshots...</p>
-              ) : snapshots.length === 0 ? (
-                <p className="app-text-muted">
-                  Todavía no hay snapshots guardados para este colegio.
-                </p>
-              ) : (
-                <div className="snapshots-table">
-                  <div className="snapshots-table-header">
-                    <span>Fecha</span>
-                    <span>Alumnos</span>
-                    <span>Grupos</span>
-                    <span>Docentes</span>
-                    <span>Certificación</span>
-                    <span>Riesgo</span>
-                  </div>
-                  {snapshots.map((s) => {
-                    const d =
-                      s.generatedAt?.toDate?.() || s.generatedAt || null;
-                    const dateLabel = d
-                      ? new Date(d).toLocaleString("es-AR", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })
-                      : "—";
-                    const cert = s.summary?.certification_rate_percent;
-                    return (
-                      <div
-                        key={s.id}
-                        className="snapshots-table-row"
-                        onClick={() => handleOpenSnapshotView(s)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <span>{dateLabel}</span>
-                        <span>{s.summary?.total_students ?? "—"}</span>
-                        <span>{s.summary?.total_student_groups ?? "—"}</span>
-                        <span>{s.summary?.total_teachers ?? "—"}</span>
-                        <span>
-                          {cert === null || cert === undefined
-                            ? "—"
-                            : `${cert.toFixed(1)}%`}
-                        </span>
-                        <span className={`risk-chip risk-${s.riskLevel || "medio"}`}>
-                          {s.riskLevel === "bajo"
-                            ? "A tiempo"
-                            : s.riskLevel === "alto"
-                            ? "Requiere atención inmediata"
-                            : "A reforzar"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
-            <div className="school-detail-section">
-              <h4 className="section-title">Docentes y contactos</h4>
-              <div className="contacts-header-row">
-                <p className="app-text-muted" style={{ margin: 0 }}>
-                  Cargá los contactos clave del colegio (docentes, directivos,
-                  coordinadores, etc.).
-                </p>
-              </div>
-
-              <form className="school-form" onSubmit={handleSubmitContact}>
-                <div className="contacts-form-grid">
-                  <label className="form-label">
-                    Nombre
-                    <input
-                      className="form-input"
-                      type="text"
-                      name="firstName"
-                      value={contactForm.firstName}
-                      onChange={handleContactChange}
-                      placeholder="Ej: María"
-                      required
-                    />
-                  </label>
-
-                  <label className="form-label">
-                    Apellido
-                    <input
-                      className="form-input"
-                      type="text"
-                      name="lastName"
-                      value={contactForm.lastName}
-                      onChange={handleContactChange}
-                      placeholder="Ej: González"
-                      required
-                    />
-                  </label>
-
-                  <label className="form-label">
-                    Email
-                    <input
-                      className="form-input"
-                      type="email"
-                      name="email"
-                      value={contactForm.email}
-                      onChange={handleContactChange}
-                      placeholder="ejemplo@digitalhouse.com"
-                    />
-                  </label>
-
-                  <label className="form-label">
-                    WhatsApp
-                    <input
-                      className="form-input"
-                      type="text"
-                      name="whatsapp"
-                      value={contactForm.whatsapp}
-                      onChange={handleContactChange}
-                      placeholder="+54 9 ..."
-                    />
-                  </label>
-
-                  <label className="form-label">
-                    Tipo de contacto
-                    <select
-                      className="form-input"
-                      name="contactType"
-                      value={contactForm.contactType}
-                      onChange={(e) => {
-                        const nextType = e.target.value;
-                        setContactForm((prev) => ({
-                          ...prev,
-                          contactType: nextType,
-                          teaches: TEACHES_RELEVANT_TYPES.has(nextType)
-                            ? prev.teaches
-                            : true,
-                        }));
-                      }}
-                    >
-                      {CONTACT_TYPE_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  {TEACHES_RELEVANT_TYPES.has(contactForm.contactType) ? (
-                    <div className="toggle-row">
-                      <span className="toggle-label">¿Da clases?</span>
-                      <div className="toggle-buttons">
-                        <button
-                          type="button"
-                          className={`chip-button ${
-                            contactForm.teaches ? "active" : ""
-                          }`}
-                          onClick={() =>
-                            setContactForm((prev) => ({ ...prev, teaches: true }))
-                          }
-                        >
-                          Sí
-                        </button>
-                        <button
-                          type="button"
-                          className={`chip-button ${
-                            !contactForm.teaches ? "active" : ""
-                          }`}
-                          onClick={() =>
-                            setContactForm((prev) => ({
-                              ...prev,
-                              teaches: false,
-                            }))
-                          }
-                        >
-                          No
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="toggle-row">
-                      <span className="toggle-label">¿Da clases?</span>
-                      <span className="app-text-muted" style={{ margin: 0 }}>
-                        —
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="form-actions" style={{ gap: "0.6rem" }}>
-                  {editingContactId && (
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={resetContactForm}
-                      disabled={contactsSaving}
-                    >
-                      Cancelar edición
-                    </button>
-                  )}
-                  <button
-                    type="submit"
-                    className="primary-button"
-                    disabled={contactsSaving}
-                  >
-                    {contactsSaving
-                      ? "Guardando..."
-                      : editingContactId
-                      ? "Guardar cambios"
-                      : "Agregar contacto"}
-                  </button>
-                </div>
-              </form>
-
-              <div style={{ marginTop: "1rem" }}>
-                <h4 className="section-title">Contactos</h4>
+              <div>
                 {contactsLoading ? (
                   <p className="app-text-muted">Cargando contactos...</p>
                 ) : contacts.length === 0 ? (
@@ -996,8 +845,261 @@ function SchoolsPage() {
                 )}
               </div>
             </div>
+
+            {/* THIRD SECTION: SNAPSHOTS */}
+            <div className="school-detail-section">
+              <div className="snapshots-header-row">
+                <h4 className="section-title">Snapshots del reporte</h4>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleOpenSnapshotModal}
+                >
+                  Nuevo snapshot
+                </button>
+              </div>
+              {snapshotsLoading ? (
+                <p className="app-text-muted">Cargando snapshots...</p>
+              ) : snapshots.length === 0 ? (
+                <p className="app-text-muted">
+                  Todavía no hay snapshots guardados para este colegio.
+                </p>
+              ) : (
+                <div className="snapshots-table">
+                  <div className="snapshots-table-header">
+                    <span>Fecha</span>
+                    <span>Alumnos</span>
+                    <span>Grupos</span>
+                    <span>Docentes</span>
+                    <span>Certificación</span>
+                    <span>Riesgo</span>
+                    <span style={{ textAlign: "right" }}>Acciones</span>
+                  </div>
+                  {snapshots.map((s) => {
+                    const d =
+                      s.generatedAt?.toDate?.() || s.generatedAt || null;
+                    const dateLabel = d
+                      ? new Date(d).toLocaleString("es-AR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "—";
+                    const cert = s.summary?.certification_rate_percent;
+                    return (
+                      <div
+                        key={s.id}
+                        className="snapshots-table-row"
+                        onClick={() => handleOpenSnapshotView(s)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <span>{dateLabel}</span>
+                        <span>{s.summary?.total_students ?? "—"}</span>
+                        <span>{s.summary?.total_student_groups ?? "—"}</span>
+                        <span>{s.summary?.total_teachers ?? "—"}</span>
+                        <span>
+                          {cert === null || cert === undefined
+                            ? "—"
+                            : `${cert.toFixed(1)}%`}
+                        </span>
+                        <span className={`risk-chip risk-${s.riskLevel || "medio"}`}>
+                          {s.riskLevel === "bajo"
+                            ? "A tiempo"
+                            : s.riskLevel === "alto"
+                            ? "Requiere atención inmediata"
+                            : "A reforzar"}
+                        </span>
+                        <div 
+                          className="contacts-actions" 
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {confirmDeleteSnapshotId === s.id ? (
+                            <div className="inline-confirm">
+                              <button
+                                type="button"
+                                className="link-button danger"
+                                onClick={() => handleDeleteSnapshot(s.id)}
+                              >
+                                Confirmar
+                              </button>
+                              <button
+                                type="button"
+                                className="link-button"
+                                onClick={() => setConfirmDeleteSnapshotId(null)}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="link-button danger"
+                              onClick={() => setConfirmDeleteSnapshotId(s.id)}
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
+      </Modal>
+
+      {/* NEW MODAL: CONTACT FORM */}
+      <Modal
+        isOpen={showContactModal}
+        title={editingContactId ? "Editar contacto" : "Nuevo contacto"}
+        onClose={handleCloseContactModal}
+        size="md"
+        footer={
+          <div className="modal-footer-spread">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleCloseContactModal}
+              disabled={contactsSaving}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="contact-form"
+              className="primary-button"
+              disabled={contactsSaving}
+            >
+              {contactsSaving
+                ? "Guardando..."
+                : editingContactId
+                ? "Guardar cambios"
+                : "Agregar contacto"}
+            </button>
+          </div>
+        }
+      >
+        <form id="contact-form" className="school-form" onSubmit={handleSubmitContact}>
+          <div className="contacts-form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <label className="form-label">
+              Nombre
+              <input
+                className="form-input"
+                type="text"
+                name="firstName"
+                value={contactForm.firstName}
+                onChange={handleContactChange}
+                placeholder="Ej: María"
+                required
+              />
+            </label>
+
+            <label className="form-label">
+              Apellido
+              <input
+                className="form-input"
+                type="text"
+                name="lastName"
+                value={contactForm.lastName}
+                onChange={handleContactChange}
+                placeholder="Ej: González"
+                required
+              />
+            </label>
+
+            <label className="form-label">
+              Email
+              <input
+                className="form-input"
+                type="email"
+                name="email"
+                value={contactForm.email}
+                onChange={handleContactChange}
+                placeholder="ejemplo@digitalhouse.com"
+              />
+            </label>
+
+            <label className="form-label">
+              WhatsApp
+              <input
+                className="form-input"
+                type="text"
+                name="whatsapp"
+                value={contactForm.whatsapp}
+                onChange={handleContactChange}
+                placeholder="+54 9 ..."
+              />
+            </label>
+
+            <label className="form-label" style={{ gridColumn: '1 / -1' }}>
+              Tipo de contacto
+              <select
+                className="form-input"
+                name="contactType"
+                value={contactForm.contactType}
+                onChange={(e) => {
+                  const nextType = e.target.value;
+                  setContactForm((prev) => ({
+                    ...prev,
+                    contactType: nextType,
+                    teaches: TEACHES_RELEVANT_TYPES.has(nextType)
+                      ? prev.teaches
+                      : true,
+                  }));
+                }}
+              >
+                {CONTACT_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              {TEACHES_RELEVANT_TYPES.has(contactForm.contactType) ? (
+                <div className="toggle-row">
+                  <span className="toggle-label">¿Da clases?</span>
+                  <div className="toggle-buttons">
+                    <button
+                      type="button"
+                      className={`chip-button ${
+                        contactForm.teaches ? "active" : ""
+                      }`}
+                      onClick={() =>
+                        setContactForm((prev) => ({ ...prev, teaches: true }))
+                      }
+                    >
+                      Sí
+                    </button>
+                    <button
+                      type="button"
+                      className={`chip-button ${
+                        !contactForm.teaches ? "active" : ""
+                      }`}
+                      onClick={() =>
+                        setContactForm((prev) => ({
+                          ...prev,
+                          teaches: false,
+                        }))
+                      }
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="toggle-row">
+                  <span className="toggle-label">¿Da clases?</span>
+                  <span className="app-text-muted" style={{ margin: 0 }}>
+                    —
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </form>
       </Modal>
 
       <Modal
