@@ -56,6 +56,21 @@
   box-shadow: 0 12px 30px rgba(34, 211, 238, 0.25);
 }
 
+.school-card-bajo {
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+}
+
+.school-card-medio {
+  border-color: rgba(234, 179, 8, 0.6);
+  box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.2);
+}
+
+.school-card-alto {
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25);
+}
+
 .school-card-title-row {
   display: flex;
   align-items: baseline;

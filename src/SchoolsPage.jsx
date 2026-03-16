@@ -83,6 +83,7 @@ function SchoolsPage() {
   const [snapshotComments, setSnapshotComments] = useState("");
   const [snapshotRisk, setSnapshotRisk] = useState("medio");
   const [groupStatuses, setGroupStatuses] = useState({});
+  const [snapshotMode, setSnapshotMode] = useState("create"); // "create" | "view"
 
   useEffect(() => {
     const colRef = collection(db, "schools");
@@ -339,6 +340,7 @@ function SchoolsPage() {
   };
 
   const handleOpenSnapshotModal = () => {
+    setSnapshotMode("create");
     setSnapshotFile(null);
     setSnapshotUploading(false);
     setSnapshotSaving(false);
@@ -400,7 +402,7 @@ function SchoolsPage() {
   };
 
   const handleSaveSnapshot = async () => {
-    if (!selectedSchool?.id || !snapshotData) return;
+    if (!selectedSchool?.id || !snapshotData || snapshotMode !== "create") return;
 
     try {
       setSnapshotSaving(true);
@@ -422,15 +424,24 @@ function SchoolsPage() {
       };
 
       const colRef = collection(db, "schools", selectedSchool.id, "snapshots");
+      const generatedDate = metadata?.generated_at
+        ? new Date(metadata.generated_at)
+        : new Date();
+
       await addDoc(colRef, {
-        generatedAt: metadata?.generated_at
-          ? new Date(metadata.generated_at)
-          : serverTimestamp(),
+        generatedAt: generatedDate,
         createdAt: serverTimestamp(),
         riskLevel: snapshotRisk,
         comments: snapshotComments.trim() || null,
         summary,
         backendPayload: snapshotData,
+      });
+
+      // actualizar resumen en el documento de colegio
+      const schoolRef = doc(db, "schools", selectedSchool.id);
+      await updateDoc(schoolRef, {
+        lastSnapshotRisk: snapshotRisk,
+        lastSnapshotAt: serverTimestamp(),
       });
 
       toast.success("Snapshot guardado.");
@@ -441,6 +452,23 @@ function SchoolsPage() {
     } finally {
       setSnapshotSaving(false);
     }
+  };
+
+  const handleOpenSnapshotView = (snapshot) => {
+    if (!snapshot?.backendPayload) {
+      toast.error("Este snapshot no tiene payload almacenado.");
+      return;
+    }
+    setSnapshotMode("view");
+    setSnapshotFile(null);
+    setSnapshotError("");
+    setSnapshotUploading(false);
+    setSnapshotSaving(false);
+    setSnapshotData(snapshot.backendPayload);
+    setSnapshotComments(snapshot.comments || "");
+    setSnapshotRisk(snapshot.riskLevel || "medio");
+    setGroupStatuses({});
+    setShowSnapshotModal(true);
   };
 
   return (
@@ -475,7 +503,11 @@ function SchoolsPage() {
             <button
               key={school.id}
               type="button"
-              className="school-card"
+              className={`school-card${
+                school.lastSnapshotRisk
+                  ? ` school-card-${school.lastSnapshotRisk}`
+                  : ""
+              }`}
               onClick={() => handleOpenDetailModal(school)}
             >
               <div className="school-card-title-row">
@@ -702,7 +734,12 @@ function SchoolsPage() {
                       : "—";
                     const cert = s.summary?.certification_rate_percent;
                     return (
-                      <div key={s.id} className="snapshots-table-row">
+                      <div
+                        key={s.id}
+                        className="snapshots-table-row"
+                        onClick={() => handleOpenSnapshotView(s)}
+                        style={{ cursor: "pointer" }}
+                      >
                         <span>{dateLabel}</span>
                         <span>{s.summary?.total_students ?? "—"}</span>
                         <span>{s.summary?.total_student_groups ?? "—"}</span>
@@ -965,7 +1002,7 @@ function SchoolsPage() {
 
       <Modal
         isOpen={showSnapshotModal && !!selectedSchool}
-        title="Nuevo snapshot desde reporte"
+        title={snapshotMode === "view" ? "Detalle de snapshot" : "Nuevo snapshot desde reporte"}
         onClose={handleCloseSnapshotModal}
         size="lg"
         footer={
@@ -978,46 +1015,50 @@ function SchoolsPage() {
                 onClick={handleCloseSnapshotModal}
                 disabled={snapshotSaving || snapshotUploading}
               >
-                Cancelar
+                {snapshotMode === "view" ? "Cerrar" : "Cancelar"}
               </button>
-              <button
-                type="button"
-                className="primary-button"
-                onClick={handleSaveSnapshot}
-                disabled={!snapshotData || snapshotSaving}
-              >
-                {snapshotSaving ? "Guardando..." : "Guardar snapshot"}
-              </button>
+              {snapshotMode === "create" && (
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleSaveSnapshot}
+                  disabled={!snapshotData || snapshotSaving}
+                >
+                  {snapshotSaving ? "Guardando..." : "Guardar snapshot"}
+                </button>
+              )}
             </div>
           </div>
         }
       >
         <div className="snapshot-layout">
-          <section className="snapshot-upload">
-            <h4 className="section-title">1. Subir reporte</h4>
-            <p className="app-text-muted">
-              Seleccioná el archivo exportado de la plataforma (CSV o Excel) y
-              lo analizamos con el backend local.
-            </p>
-            <div className="snapshot-upload-row">
-              <input
-                type="file"
-                accept=".csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-                onChange={handleSnapshotFileChange}
-              />
-              <button
-                type="button"
-                className="primary-button"
-                onClick={handleUploadSnapshot}
-                disabled={!snapshotFile || snapshotUploading}
-              >
-                {snapshotUploading ? "Analizando..." : "Analizar reporte"}
-              </button>
-            </div>
-            {snapshotError && (
-              <p className="snapshot-error">{snapshotError}</p>
-            )}
-          </section>
+          {snapshotMode === "create" && (
+            <section className="snapshot-upload">
+              <h4 className="section-title">1. Subir reporte</h4>
+              <p className="app-text-muted">
+                Seleccioná el archivo exportado de la plataforma (CSV o Excel) y
+                lo analizamos con el backend local.
+              </p>
+              <div className="snapshot-upload-row">
+                <input
+                  type="file"
+                  accept=".csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                  onChange={handleSnapshotFileChange}
+                />
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleUploadSnapshot}
+                  disabled={!snapshotFile || snapshotUploading}
+                >
+                  {snapshotUploading ? "Analizando..." : "Analizar reporte"}
+                </button>
+              </div>
+              {snapshotError && (
+                <p className="snapshot-error">{snapshotError}</p>
+              )}
+            </section>
+          )}
 
           {snapshotData && (
             <section className="snapshot-preview">
