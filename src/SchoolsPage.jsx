@@ -72,6 +72,18 @@ function SchoolsPage() {
     system: "Argentina Nativa",
   });
 
+  const [snapshots, setSnapshots] = useState([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [snapshotFile, setSnapshotFile] = useState(null);
+  const [snapshotUploading, setSnapshotUploading] = useState(false);
+  const [snapshotSaving, setSnapshotSaving] = useState(false);
+  const [snapshotError, setSnapshotError] = useState("");
+  const [snapshotData, setSnapshotData] = useState(null);
+  const [snapshotComments, setSnapshotComments] = useState("");
+  const [snapshotRisk, setSnapshotRisk] = useState("medio");
+  const [groupStatuses, setGroupStatuses] = useState({});
+
   useEffect(() => {
     const colRef = collection(db, "schools");
     const q = query(colRef, orderBy("createdAt", "desc"));
@@ -203,6 +215,33 @@ function SchoolsPage() {
     return () => unsubscribe();
   }, [showDetailModal, selectedSchool?.id]);
 
+  useEffect(() => {
+    if (!showDetailModal || !selectedSchool?.id) return;
+
+    setSnapshotsLoading(true);
+    const colRef = collection(db, "schools", selectedSchool.id, "snapshots");
+    const q = query(colRef, orderBy("generatedAt", "desc"));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        setSnapshots(data);
+        setSnapshotsLoading(false);
+      },
+      (error) => {
+        console.error("Error al escuchar snapshots:", error);
+        toast.error("No se pudieron cargar los snapshots.");
+        setSnapshotsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [showDetailModal, selectedSchool?.id]);
+
   const handleDeleteSelectedSchool = async () => {
     if (!selectedSchool) return;
 
@@ -296,6 +335,111 @@ function SchoolsPage() {
     } catch (error) {
       console.error("Error al eliminar contacto:", error);
       toast.error("No se pudo eliminar el contacto.");
+    }
+  };
+
+  const handleOpenSnapshotModal = () => {
+    setSnapshotFile(null);
+    setSnapshotUploading(false);
+    setSnapshotSaving(false);
+    setSnapshotError("");
+    setSnapshotData(null);
+    setSnapshotComments("");
+    setSnapshotRisk("medio");
+    setGroupStatuses({});
+    setShowSnapshotModal(true);
+  };
+
+  const handleCloseSnapshotModal = () => {
+    setShowSnapshotModal(false);
+  };
+
+  const handleSnapshotFileChange = (event) => {
+    const file = event.target.files?.[0];
+    setSnapshotFile(file || null);
+  };
+
+  const handleUploadSnapshot = async () => {
+    if (!snapshotFile) {
+      toast.error("Seleccioná un archivo .csv o .xlsx.");
+      return;
+    }
+    if (!selectedSchool) {
+      toast.error("No hay un colegio seleccionado.");
+      return;
+    }
+
+    try {
+      setSnapshotUploading(true);
+      setSnapshotError("");
+
+      const formData = new FormData();
+      formData.append("file", snapshotFile);
+
+      const response = await fetch("http://127.0.0.1:8000/analyze-report", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSnapshotData(data);
+      toast.success("Reporte analizado correctamente.");
+    } catch (error) {
+      console.error("Error al analizar reporte:", error);
+      setSnapshotError(
+        "No se pudo analizar el reporte. Verificá que el backend esté levantado."
+      );
+      toast.error("Error al analizar el reporte.");
+    } finally {
+      setSnapshotUploading(false);
+    }
+  };
+
+  const handleSaveSnapshot = async () => {
+    if (!selectedSchool?.id || !snapshotData) return;
+
+    try {
+      setSnapshotSaving(true);
+
+      const { school, students, teachers_pld, metadata } = snapshotData;
+
+      const summary = {
+        schoolIdFromReport: school?.id || null,
+        total_students: school?.total_students ?? null,
+        total_student_groups: school?.total_student_groups ?? null,
+        total_teachers: teachers_pld?.summary?.total_teachers ?? null,
+        certified_teachers: teachers_pld?.summary?.certified_teachers ?? null,
+        certification_rate_percent:
+          teachers_pld?.summary?.certification_rate_percent ?? null,
+        digital_vitality_30d_avg:
+          students?.summary?.digital_vitality_30d_avg ?? null,
+        recent_progress_15d_avg:
+          students?.summary?.recent_progress_15d_avg ?? null,
+      };
+
+      const colRef = collection(db, "schools", selectedSchool.id, "snapshots");
+      await addDoc(colRef, {
+        generatedAt: metadata?.generated_at
+          ? new Date(metadata.generated_at)
+          : serverTimestamp(),
+        createdAt: serverTimestamp(),
+        riskLevel: snapshotRisk,
+        comments: snapshotComments.trim() || null,
+        summary,
+        backendPayload: snapshotData,
+      });
+
+      toast.success("Snapshot guardado.");
+      setShowSnapshotModal(false);
+    } catch (error) {
+      console.error("Error al guardar snapshot:", error);
+      toast.error("No se pudo guardar el snapshot.");
+    } finally {
+      setSnapshotSaving(false);
     }
   };
 
@@ -518,6 +662,68 @@ function SchoolsPage() {
                   {selectedSchool.system || "—"}
                 </span>
               </div>
+            </div>
+
+            <div className="school-detail-section">
+              <div className="snapshots-header-row">
+                <h4 className="section-title">Snapshots del reporte</h4>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={handleOpenSnapshotModal}
+                >
+                  Nuevo snapshot desde reporte
+                </button>
+              </div>
+              {snapshotsLoading ? (
+                <p className="app-text-muted">Cargando snapshots...</p>
+              ) : snapshots.length === 0 ? (
+                <p className="app-text-muted">
+                  Todavía no hay snapshots guardados para este colegio.
+                </p>
+              ) : (
+                <div className="snapshots-table">
+                  <div className="snapshots-table-header">
+                    <span>Fecha</span>
+                    <span>Alumnos</span>
+                    <span>Grupos</span>
+                    <span>Docentes</span>
+                    <span>Certificación</span>
+                    <span>Riesgo</span>
+                  </div>
+                  {snapshots.map((s) => {
+                    const d =
+                      s.generatedAt?.toDate?.() || s.generatedAt || null;
+                    const dateLabel = d
+                      ? new Date(d).toLocaleString("es-AR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "—";
+                    const cert = s.summary?.certification_rate_percent;
+                    return (
+                      <div key={s.id} className="snapshots-table-row">
+                        <span>{dateLabel}</span>
+                        <span>{s.summary?.total_students ?? "—"}</span>
+                        <span>{s.summary?.total_student_groups ?? "—"}</span>
+                        <span>{s.summary?.total_teachers ?? "—"}</span>
+                        <span>
+                          {cert === null || cert === undefined
+                            ? "—"
+                            : `${cert.toFixed(1)}%`}
+                        </span>
+                        <span className={`risk-chip risk-${s.riskLevel || "medio"}`}>
+                          {s.riskLevel === "bajo"
+                            ? "A tiempo"
+                            : s.riskLevel === "alto"
+                            ? "Requiere atención inmediata"
+                            : "A reforzar"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="school-detail-section">
@@ -755,6 +961,269 @@ function SchoolsPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={showSnapshotModal && !!selectedSchool}
+        title="Nuevo snapshot desde reporte"
+        onClose={handleCloseSnapshotModal}
+        size="lg"
+        footer={
+          <div className="modal-footer-spread">
+            <div />
+            <div className="form-actions" style={{ gap: "0.6rem" }}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleCloseSnapshotModal}
+                disabled={snapshotSaving || snapshotUploading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={handleSaveSnapshot}
+                disabled={!snapshotData || snapshotSaving}
+              >
+                {snapshotSaving ? "Guardando..." : "Guardar snapshot"}
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <div className="snapshot-layout">
+          <section className="snapshot-upload">
+            <h4 className="section-title">1. Subir reporte</h4>
+            <p className="app-text-muted">
+              Seleccioná el archivo exportado de la plataforma (CSV o Excel) y
+              lo analizamos con el backend local.
+            </p>
+            <div className="snapshot-upload-row">
+              <input
+                type="file"
+                accept=".csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                onChange={handleSnapshotFileChange}
+              />
+              <button
+                type="button"
+                className="primary-button"
+                onClick={handleUploadSnapshot}
+                disabled={!snapshotFile || snapshotUploading}
+              >
+                {snapshotUploading ? "Analizando..." : "Analizar reporte"}
+              </button>
+            </div>
+            {snapshotError && (
+              <p className="snapshot-error">{snapshotError}</p>
+            )}
+          </section>
+
+          {snapshotData && (
+            <section className="snapshot-preview">
+              <h4 className="section-title">2. Vista previa</h4>
+              <div className="snapshot-kpi-grid">
+                <div className="snapshot-kpi-card">
+                  <span className="snapshot-kpi-label">Alumnos</span>
+                  <span className="snapshot-kpi-value">
+                    {snapshotData.school?.total_students ?? "—"}
+                  </span>
+                </div>
+                <div className="snapshot-kpi-card">
+                  <span className="snapshot-kpi-label">Grupos</span>
+                  <span className="snapshot-kpi-value">
+                    {snapshotData.school?.total_student_groups ?? "—"}
+                  </span>
+                </div>
+                <div className="snapshot-kpi-card">
+                  <span className="snapshot-kpi-label">
+                    Vitalidad 30d (prom.)
+                  </span>
+                  <span className="snapshot-kpi-value">
+                    {snapshotData.students?.summary
+                      ?.digital_vitality_30d_avg != null
+                      ? `${snapshotData.students.summary.digital_vitality_30d_avg.toFixed(
+                          1
+                        )}%`
+                      : "—"}
+                  </span>
+                </div>
+                <div className="snapshot-kpi-card">
+                  <span className="snapshot-kpi-label">
+                    Docentes certificados
+                  </span>
+                  <span className="snapshot-kpi-value">
+                    {snapshotData.teachers_pld?.summary
+                      ?.certification_rate_percent != null
+                      ? `${snapshotData.teachers_pld.summary.certification_rate_percent.toFixed(
+                          1
+                        )}%`
+                      : "—"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="snapshot-columns">
+                <div className="snapshot-column">
+                  <h5 className="snapshot-subtitle">Grupos de alumnos</h5>
+                  {snapshotData.students?.groups?.length ? (
+                    <div className="snapshot-table">
+                      <div className="snapshot-table-header">
+                        <span>Ruta</span>
+                        <span>Alumnos</span>
+                        <span>Clases</span>
+                        <span>Cursos</span>
+                        <span>Vitalidad</span>
+                        <span>Semáforo</span>
+                      </div>
+                      {snapshotData.students.groups.map((g, idx) => (
+                        <div key={idx} className="snapshot-table-row">
+                          <span>{g.route_name}</span>
+                          <span>{g.students_count}</span>
+                          <span>
+                            {g.metrics?.classes_completion_percent != null
+                              ? g.metrics.classes_completion_percent.toFixed(1)
+                              : "—"}
+                          </span>
+                          <span>
+                            {g.metrics?.courses_completion_percent != null
+                              ? `${g.metrics.courses_completion_percent.toFixed(
+                                  1
+                                )}%`
+                              : "—"}
+                          </span>
+                          <span>
+                            {g.metrics?.digital_vitality_30d_percent != null
+                              ? `${g.metrics.digital_vitality_30d_percent.toFixed(
+                                  1
+                                )}%`
+                              : "—"}
+                          </span>
+                          <span>
+                            <div className="status-dots">
+                              {["green", "yellow", "red"].map((color) => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  className={`status-dot ${color} ${
+                                    groupStatuses[g.route_name] === color
+                                      ? "selected"
+                                      : ""
+                                  }`}
+                                  onClick={() =>
+                                    setGroupStatuses((prev) => ({
+                                      ...prev,
+                                      [g.route_name]:
+                                        prev[g.route_name] === color ? null : color,
+                                    }))
+                                  }
+                                  title=""
+                                />
+                              ))}
+                            </div>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="app-text-muted">
+                      No se encontraron grupos de alumnos en este reporte.
+                    </p>
+                  )}
+                </div>
+
+                <div className="snapshot-column">
+                  <h5 className="snapshot-subtitle">Docentes PLD</h5>
+                  {snapshotData.teachers_pld?.teachers?.length ? (
+                    <div className="snapshot-table">
+                      <div className="snapshot-table-header">
+                        <span>Docente</span>
+                        <span>Certificaciones</span>
+                        <span>Completas</span>
+                      </div>
+                      {snapshotData.teachers_pld.teachers.map((t, idx) => {
+                        const total = t.plds?.length || 0;
+                        const done = t.plds?.filter((p) => p.certified).length || 0;
+                        return (
+                          <div key={idx} className="snapshot-table-row">
+                            <span>{t.name}</span>
+                            <span
+                              className={total ? "hint-hover" : ""}
+                              title={
+                                t.plds && t.plds.length
+                                  ? t.plds
+                                      .map((p) => p.certification_name)
+                                      .join(" • ")
+                                  : undefined
+                              }
+                            >
+                              {total}
+                            </span>
+                            <span
+                              className={done ? "hint-hover" : ""}
+                              title={
+                                done && t.plds
+                                  ? t.plds
+                                      .filter((p) => p.certified)
+                                      .map((p) => p.certification_name)
+                                      .join(" • ")
+                                  : undefined
+                              }
+                            >
+                              {done}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="app-text-muted">
+                      No se encontraron docentes PLD en este reporte.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="snapshot-notes">
+                <h5 className="snapshot-subtitle">3. Comentarios y status del colegio</h5>
+                <div className="snapshot-notes-grid">
+                  <label className="form-label">
+                    Comentarios
+                    <textarea
+                      className="form-input"
+                      rows={3}
+                      value={snapshotComments}
+                      onChange={(e) => setSnapshotComments(e.target.value)}
+                      placeholder="Notas sobre este snapshot, acuerdos, próximos pasos..."
+                    />
+                  </label>
+
+                  <label className="form-label">
+                    Status del colegio
+                    <div className="toggle-buttons">
+                      {[
+                        { key: "bajo", label: "A tiempo" },
+                        { key: "medio", label: "A reforzar" },
+                        { key: "alto", label: "Requiere atención inmediata" },
+                      ].map(({ key, label }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`chip-button risk-${key} ${
+                            snapshotRisk === key ? "active" : ""
+                          }`}
+                          onClick={() => setSnapshotRisk(key)}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
       </Modal>
     </>
   );

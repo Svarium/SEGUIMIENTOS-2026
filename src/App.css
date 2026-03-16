@@ -228,8 +228,8 @@
 }
 
 .modal-shell.modal-lg {
-  width: min(1180px, 98vw);
-  max-height: 92vh;
+  width: min(1280px, 99vw);
+  max-height: 96vh;
 }
 
 .modal-header {
@@ -465,8 +465,6 @@
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-
-
 .app-title {
   font-size: 1.4rem;
   margin-bottom: 0.75rem;
@@ -483,4 +481,233 @@
 .app-text-muted {
   font-size: 0.9rem;
   color: #6b7280;
+}
+
+/* Snapshots */
+.snapshots-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.snapshots-table {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background-color: rgba(15, 23, 42, 0.9);
+  overflow: hidden;
+  font-size: 0.85rem;
+}
+
+.snapshots-table-header,
+.snapshots-table-row {
+  display: grid;
+  grid-template-columns: 1.8fr 0.9fr 0.9fr 0.9fr 1.1fr 0.9fr;
+  gap: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  align-items: center;
+}
+
+.snapshots-table-header {
+  background-color: rgba(15, 23, 42, 1);
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.snapshots-table-row:nth-child(odd) {
+  background-color: rgba(15, 23, 42, 0.9);
+}
+
+.risk-chip {
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+
+.risk-bajo {
+  background-color: rgba(22, 163, 74, 0.2);
+  color: #bbf7d0;
+}
+
+.risk-medio {
+  background-color: rgba(234, 179, 8, 0.2);
+  color: #fee2e2;
+}
+
+.risk-alto {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+}
+
+.snapshot-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.snapshot-upload {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+.snapshot-upload-row {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.snapshot-error {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #fecaca;
+}
+
+.snapshot-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.snapshot-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+@media (max-width: 1100px) {
+  .snapshot-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.snapshot-kpi-card {
+  background-color: rgba(15, 23, 42, 0.95);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.snapshot-kpi-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.snapshot-kpi-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.hint-hover {
+  cursor: help;
+}
+
+.snapshot-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 1100px) {
+  .snapshot-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.snapshot-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.snapshot-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #e5e7eb;
+}
+
+.snapshot-table {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background-color: rgba(15, 23, 42, 0.95);
+  overflow: hidden;
+  font-size: 0.8rem;
+}
+
+.snapshot-table-header,
+.snapshot-table-row {
+  display: grid;
+  grid-template-columns: 2.1fr 0.7fr 0.7fr 0.9fr 0.8fr 0.7fr;
+  gap: 0.6rem;
+  padding: 0.45rem 0.75rem;
+}
+
+.snapshot-table-header {
+  background-color: rgba(15, 23, 42, 1);
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+.snapshot-table-row:nth-child(odd) {
+  background-color: rgba(15, 23, 42, 0.9);
+}
+
+.snapshot-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.snapshot-notes-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .snapshot-notes-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.status-dots {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background-color: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.status-dot.green {
+  background-color: #22c55e;
+}
+
+.status-dot.yellow {
+  background-color: #eab308;
+}
+
+.status-dot.red {
+  background-color: #ef4444;
+}
+
+.status-dot.selected {
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.6);
 }
