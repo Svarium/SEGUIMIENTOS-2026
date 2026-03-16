@@ -7,7 +7,11 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  doc,
+  deleteDoc,
 } from "firebase/firestore";
+import toast from "react-hot-toast";
+import Modal from "./Modal";
 
 const SYSTEM_OPTIONS = [
   "Argentina Nativa",
@@ -15,14 +19,30 @@ const SYSTEM_OPTIONS = [
   "Otro",
 ];
 
+const COUNTRY_OPTIONS = [
+  "Argentina",
+  "Brasil",
+  "Colombia",
+  "México",
+  "Uruguay",
+  "Chile",
+  "Honduras",
+  "Guatemala",
+  "El Salvador",
+];
+
 function SchoolsPage() {
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [form, setForm] = useState({
     name: "",
     alias: "",
-    country: "",
+    country: "Argentina",
     system: "Argentina Nativa",
   });
 
@@ -42,6 +62,7 @@ function SchoolsPage() {
       },
       (error) => {
         console.error("Error al escuchar schools:", error);
+        toast.error("No se pudieron cargar los colegios.");
         setLoading(false);
       }
     );
@@ -57,7 +78,7 @@ function SchoolsPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!form.name.trim()) {
-      alert("El nombre del colegio es obligatorio.");
+      toast.error("El nombre del colegio es obligatorio.");
       return;
     }
 
@@ -67,34 +88,140 @@ function SchoolsPage() {
       await addDoc(colRef, {
         name: form.name.trim(),
         alias: form.alias.trim() || null,
-        country: form.country.trim() || null,
+        country: form.country || null,
         system: form.system,
         createdAt: serverTimestamp(),
       });
       setForm({
         name: "",
         alias: "",
-        country: "",
+        country: "Argentina",
         system: "Argentina Nativa",
       });
+      toast.success("Colegio creado correctamente.");
     } catch (error) {
       console.error("Error al crear colegio:", error);
-      alert("No se pudo crear el colegio.");
+      toast.error("No se pudo crear el colegio.");
     } finally {
       setSaving(false);
     }
   };
 
-  return (
-    <div className="schools-layout">
-      <section className="schools-form-section">
-        <h2 className="app-title">Colegios</h2>
-        <p className="app-text">
-          Cargá los colegios con los que trabajás. Más adelante vas a poder
-          agregar contactos y snapshots para cada uno.
-        </p>
+  const handleOpenCreateModal = () => {
+    setForm({
+      name: "",
+      alias: "",
+      country: "Argentina",
+      system: "Argentina Nativa",
+    });
+    setShowCreateModal(true);
+  };
 
-        <form className="school-form" onSubmit={handleSubmit}>
+  const handleOpenDetailModal = (school) => {
+    setSelectedSchool(school);
+    setShowDetailModal(true);
+  };
+
+  const handleCloseModals = () => {
+    setShowCreateModal(false);
+    setShowDetailModal(false);
+    setSelectedSchool(null);
+    setConfirmingDelete(false);
+  };
+
+  const handleDeleteSelectedSchool = async () => {
+    if (!selectedSchool) return;
+
+    try {
+      const ref = doc(db, "schools", selectedSchool.id);
+      await deleteDoc(ref);
+      toast.success("Colegio eliminado.");
+      handleCloseModals();
+    } catch (error) {
+      console.error("Error al eliminar colegio:", error);
+      toast.error("No se pudo eliminar el colegio.");
+    }
+  };
+
+  return (
+    <>
+      <div className="schools-header">
+        <div>
+          <h2 className="app-title">Colegios</h2>
+          <p className="app-text">
+            Cargá los colegios con los que trabajás. Más adelante vas a poder
+            agregar contactos, docentes y snapshots para cada uno.
+          </p>
+        </div>
+        <button
+          className="primary-button"
+          type="button"
+          onClick={handleOpenCreateModal}
+        >
+          Agregar colegio
+        </button>
+      </div>
+
+      <section className="schools-grid">
+        {loading ? (
+          <p className="app-text-muted">Cargando colegios...</p>
+        ) : schools.length === 0 ? (
+          <p className="app-text-muted">
+            Todavía no hay colegios cargados. Usá el botón "Agregar colegio"
+            para crear el primero.
+          </p>
+        ) : (
+          schools.map((school) => (
+            <button
+              key={school.id}
+              type="button"
+              className="school-card"
+              onClick={() => handleOpenDetailModal(school)}
+            >
+              <div className="school-card-title-row">
+                <h3 className="school-card-name">{school.name}</h3>
+                {school.alias && (
+                  <span className="school-card-alias">{school.alias}</span>
+                )}
+              </div>
+              <div className="school-card-meta">
+                <span>{school.country || "Sin país"}</span>
+                <span>•</span>
+                <span>{school.system || "Sin sistema"}</span>
+              </div>
+              <p className="school-card-hint">
+                Click para ver detalles, editar o eliminar.
+              </p>
+            </button>
+          ))
+        )}
+      </section>
+
+      <Modal
+        isOpen={showCreateModal}
+        title="Nuevo colegio"
+        onClose={handleCloseModals}
+        footer={
+          <div className="modal-footer-spread">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleCloseModals}
+            >
+              Cancelar
+            </button>
+            <button
+              className="primary-button"
+              type="submit"
+              form="create-school-form"
+              disabled={saving}
+            >
+              {saving ? "Guardando..." : "Crear colegio"}
+            </button>
+          </div>
+        }
+      >
+        <form id="create-school-form" className="school-form" onSubmit={handleSubmit}>
           <div className="form-row">
             <label className="form-label">
               Nombre del colegio
@@ -125,14 +252,18 @@ function SchoolsPage() {
 
             <label className="form-label">
               País
-              <input
+              <select
                 className="form-input"
-                type="text"
                 name="country"
                 value={form.country}
                 onChange={handleChange}
-                placeholder="Ej: Colombia"
-              />
+              >
+                {COUNTRY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 
@@ -153,48 +284,97 @@ function SchoolsPage() {
               </select>
             </label>
           </div>
+        </form>
+      </Modal>
 
-          <div className="form-actions">
+      <Modal
+        isOpen={showDetailModal && !!selectedSchool}
+        title={selectedSchool ? selectedSchool.name : "Detalle de colegio"}
+        onClose={handleCloseModals}
+        footer={
+          <div className="modal-footer-spread">
+            <div className="delete-confirm-area">
+              {confirmingDelete ? (
+                <>
+                  <span className="delete-confirm-text">
+                    ¿Eliminar este colegio? Esta acción no se puede deshacer.
+                  </span>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={handleDeleteSelectedSchool}
+                  >
+                    Sí, eliminar
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => setConfirmingDelete(false)}
+                  >
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={() => setConfirmingDelete(true)}
+                >
+                  Eliminar colegio
+                </button>
+              )}
+            </div>
             <button
-              className="primary-button"
-              type="submit"
-              disabled={saving}
+              type="button"
+              className="secondary-button"
+              onClick={handleCloseModals}
             >
-              {saving ? "Guardando..." : "Crear colegio"}
+              Cerrar
             </button>
           </div>
-        </form>
-      </section>
-
-      <section className="schools-list-section">
-        <h3 className="section-title">Listado de colegios</h3>
-        {loading ? (
-          <p className="app-text-muted">Cargando colegios...</p>
-        ) : schools.length === 0 ? (
-          <p className="app-text-muted">
-            Todavía no hay colegios cargados. Creá el primero con el formulario
-            de la izquierda.
-          </p>
-        ) : (
-          <div className="schools-table">
-            <div className="schools-table-header">
-              <span>Nombre</span>
-              <span>Alias</span>
-              <span>País</span>
-              <span>Sistema</span>
-            </div>
-            {schools.map((school) => (
-              <div key={school.id} className="schools-table-row">
-                <span>{school.name}</span>
-                <span>{school.alias || "—"}</span>
-                <span>{school.country || "—"}</span>
-                <span>{school.system || "—"}</span>
+        }
+      >
+        {selectedSchool && (
+          <div className="school-detail">
+            <div className="school-detail-grid">
+              <div className="school-detail-block">
+                <span className="school-detail-label">Nombre</span>
+                <span className="school-detail-value">
+                  {selectedSchool.name || "—"}
+                </span>
               </div>
-            ))}
+              <div className="school-detail-block">
+                <span className="school-detail-label">Alias</span>
+                <span className="school-detail-value">
+                  {selectedSchool.alias || "—"}
+                </span>
+              </div>
+              <div className="school-detail-block">
+                <span className="school-detail-label">País</span>
+                <span className="school-detail-value">
+                  {selectedSchool.country || "—"}
+                </span>
+              </div>
+              <div className="school-detail-block">
+                <span className="school-detail-label">Sistema</span>
+                <span className="school-detail-value">
+                  {selectedSchool.system || "—"}
+                </span>
+              </div>
+            </div>
+
+            <div className="school-detail-section">
+              <h4 className="section-title">Docentes y contactos</h4>
+              <p className="app-text-muted">
+                Próximamente vas a poder cargar y editar acá los contactos
+                (directivos, docentes) y vincular sus PLD y snapshots del
+                backend.
+              </p>
+            </div>
           </div>
         )}
-      </section>
-    </div>
+      </Modal>
+    </>
   );
 }
 

@@ -19,28 +19,75 @@
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.9);
 }
 
-.schools-layout {
+.schools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.schools-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
 }
 
-@media (max-width: 900px) {
-  .schools-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.schools-form-section {
+.school-card {
+  text-align: left;
+  background: radial-gradient(
+      circle at top left,
+      rgba(56, 189, 248, 0.16),
+      transparent 55%
+    ),
+    rgba(15, 23, 42, 0.98);
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  color: #e5e7eb;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.3rem;
 }
 
-.schools-list-section {
+.school-card:hover {
+  border-color: #22d3ee;
+  box-shadow: 0 12px 30px rgba(34, 211, 238, 0.25);
+}
+
+.school-card-title-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  align-items: baseline;
+  gap: 0.4rem;
+  justify-content: space-between;
+}
+
+.school-card-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.school-card-alias {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #e5e7eb;
+}
+
+.school-card-meta {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.school-card-hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.78rem;
+  color: #6b7280;
 }
 
 .section-title {
@@ -147,6 +194,149 @@
 
 .schools-table-row:nth-child(even) {
   background-color: rgba(15, 23, 42, 0.8);
+}
+
+/* Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+.modal-shell {
+  width: min(900px, 96vw);
+  max-height: 90vh;
+  background: #020617;
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.9);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 1.25rem 1.5rem 1rem 1.5rem;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 0.9rem 1.5rem 1.1rem 1.5rem;
+  border-top: 1px solid rgba(31, 41, 55, 0.9);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.modal-footer-spread {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.delete-confirm-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.delete-confirm-text {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.secondary-button {
+  background: transparent;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #e5e7eb;
+  padding: 0.45rem 1.3rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.danger-button {
+  background: #b91c1c;
+  border-radius: 999px;
+  border: none;
+  color: #f9fafb;
+  padding: 0.45rem 1.3rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.school-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.school-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 900px) {
+  .school-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.school-detail-block {
+  background-color: rgba(15, 23, 42, 0.95);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.school-detail-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+}
+
+.school-detail-value {
+  font-size: 0.9rem;
+  color: #e5e7eb;
+}
+
+.school-detail-section {
+  margin-top: 0.5rem;
 }
 
 .app-title {
