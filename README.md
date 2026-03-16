@@ -1,368 +1,109 @@
+# Seguimientos DH-Schools 👩‍💻 — Frontend (React + Vite)
 
-## App Seguimientos 2026 — Frontend (React + Vite)
+Aplicación web en React, construida como una **Single Page Application (SPA)**, pensada para que un mentor pueda hacer un seguimiento pedagógico y gerencial detallado de colegios a lo largo del año académico.
 
-Aplicación web en React pensada para que un mentor pueda hacer seguimiento pedagógico de colegios a lo largo del año, integrándose con:
+La plataforma se integra con:
+- Un **backend en FastAPI** que analiza reportes masivos de plataformas educativas y devuelve JSON estructurados.
+- **Firestore (Firebase)** para persistir jerárquicamente colegios, contactos y el historial de "snapshots" (fotos del estado del colegio en un momento dado).
+- **Firebase Auth (Google)** para restringir el acceso únicamente a personal autorizado.
 
-- Un backend en FastAPI que analiza reportes de plataformas educativas y devuelve JSON estructurado.
-- Firestore (Firebase) para persistir colegios, contactos y snapshots.
-- Firebase Auth (Google) para restringir acceso.
-
-Todo el UI está construido en **modo oscuro**, con CSS puro y tipografía estilo sistema/Roboto.
-
----
-
-## Estructura general del proyecto
-
-Raíz del proyecto:
-
-- `vite.config.js`  
-  Configuración de Vite con React y el nuevo compilador de React.
-
-- `index.html`  
-  HTML base donde se monta la app (`<div id="root">`).
-
-- `package.json`  
-  Dependencias principales:
-  - `react`, `react-dom`
-  - `firebase`
-  - `react-hot-toast`
-  - Vite + plugin React
-
-- `README.md`  
-  Este archivo: documentación funcional y técnica del frontend.
-
-### Carpeta `src/`
-
-Contiene todo el código de la app.
-
-- `main.jsx`  
-  Punto de entrada. Hace:
-  - Import de estilos globales `index.css`.
-  - Renderiza `<App />` envuelto en `StrictMode`.
-  - Monta `<Toaster />` de `react-hot-toast` con estilos oscuros para notificaciones flotantes.
-
-- `App.jsx`  
-  Componente raíz:
-  - Envuelve todo en `AuthGate` (requiere login con Google).
-  - Dentro de `AuthGate`, renderiza el layout principal (`app-background`, `app-panel`) y la página de colegios (`<SchoolsPage />`).
-
-- `index.css`  
-  Estilos globales:
-  - Resetea márgenes del `body`, configura fuente base y colores de fondo.
-  - Elimina el “marco” central del template de Vite para que la app use **todo el ancho** de la ventana.
-
-- `App.css`  
-  Estilos del layout y componentes “de dominio”:
-  - `app-background`, `app-panel`: fondo degradado oscuro y panel central.
-  - Cards de colegios (`school-card`).
-  - Formularios (`form-row`, `form-label`, `form-input`).
-  - Botones primarios/ secundarios (`primary-button`, `secondary-button`, `danger-button`).
-  - Modales (`modal-backdrop`, `modal-shell`, variantes `modal-sm`, `modal-md`, `modal-lg`).
-  - Tablas de colegios, contactos, snapshots y vista previa de snapshot.
-  - Estilos específicos para chips de riesgo, “semáforos” de grupos, etc.
+Todo el UI está construido en un elegante **modo oscuro (Dark Mode)**, utilizando CSS puro, tipografías del sistema (`Roboto`), gráficos interactivos y modales limpios para una experiencia de usuario gerente ('delicada' y rápida).
 
 ---
 
-## Autenticación y Firebase
+## 🏗 Estructura General del Proyecto
 
-- `firebase.js`  
-  - Inicializa Firebase con la configuración del proyecto.
-  - Exporta:
-    - `auth`, `googleProvider`, `signInWithPopup`, `signOut`, `onAuthStateChanged`.
-    - `db` (Firestore).
-    - `analytics` (si el entorno lo soporta).
+- `vite.config.js`: Configuración de Vite con React.
+- `index.html`: Base de la SPA.
+- `package.json`: Dependencias principales (`react`, `react-router-dom`, `firebase`, `chart.js`, `html2canvas`, `jspdf`, `react-hot-toast`).
 
-- `AuthGate.jsx`  
-  - Escucha el estado de autenticación (`onAuthStateChanged`).
-  - Si **no hay usuario**:
-    - Muestra un modal centrado “App Seguimientos 2026” con botón “Ingresar con Google”.
-  - Si **hay usuario**:
-    - Muestra:
-      - Header fijo con nombre de la app y email actual + botón “Cerrar sesión”.
-      - Un `<main>` donde se renderiza el contenido de la app (`children`).
+### 📂 Carpeta `src/` (Componentes Clave)
 
-Reglas recomendadas de Firestore (ejemplo usado):
-
-```js
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Solo usuarios autenticados cuyo email termina en @digitalhouse.com
-    match /{document=**} {
-      allow read, write: if
-        request.auth != null
-        && request.auth.token.email != null
-        && request.auth.token.email.matches('.*@digitalhouse\\.com');
-    }
-  }
-}
-```
+- `main.jsx`: Punto de entrada que inyecta React y las notificaciones flotantes (`Toaster`).
+- `App.jsx`: Configura el enrutador (`react-router-dom`) manejando las rutas `/schools` y `/evolution` bajo el paraguas de autenticación.
+- `AuthGate.jsx`: Escucha la sesión del usuario. Si no hay sesión, muestra el login de Google. Si la hay, renderiza el **Ménu de Navegación Global (NavLinks)** y el contenido protegido.
+- `App.css` y `index.css`: Archivos de estilo que controlan el modo oscuro, grillas corporativas, tarjetas y modales.
 
 ---
 
-## Página principal: colegios (`SchoolsPage.jsx`)
+## 📊 Vistas y Funcionalidades Principales
 
-Responsable de todo el flujo principal: colegios, contactos y snapshots.
+La aplicación se divide en dos grandes "Pestañas" o Vistas principales accesibles desde el menú superior:
 
-### Colección `schools` (colegios)
+### 1. Pestaña: Colegios (`SchoolsPage.jsx` y `Dashboard.jsx`)
+Es el panel de control principal (Home).
 
-En Firestore, cada colegio se guarda en la colección `schools` con campos:
+**Dashboard Gerencial Superior:**
+Una vez cargados los colegios, la parte superior renderiza gráficos generados con `Chart.js`:
+- **Tarjetas KPI:** Total de colegios y distribución por "Sistema" (Santillana, Argentina Nativa, etc.).
+- **Torta de Vitalidad Digital:** Lee el último reporte (*snapshot*) de cada colegio y los agrupa en: *Óptima (Verde), Media (Amarillo) y Riesgo/Baja (Rojo)*.
+- **Torta de Status (Semáforo):** Gráfico que representa el nivel de riesgo general (*A tiempo, A reforzar, Requiere atención inmediata*).
+- **Interactividad Dinámica:** Al hacer **clic sobre cualquier porción de color** en los gráficos, se abre instantáneamente un modal listando qué colegios exactos conforman ese grupo.
+- **Gráfico de Barras:** Distribución de colegios por país de residencia.
 
-- `name`: nombre del colegio.
-- `alias`: alias corto (ej: “GCC”).
-- `country`: país (selector entre Argentina, Brasil, Colombia, México, Uruguay, Chile, Honduras, Guatemala, El Salvador).
-- `system`: sistema (ej: “Argentina Nativa”, “Santillana”, “Otro”).
-- `createdAt`: `serverTimestamp()`.
-- `lastSnapshotRisk`: nivel de status del colegio según el último snapshot (`"bajo" | "medio" | "alto"`).
-- `lastSnapshotAt`: fecha/hora del último snapshot guardado.
+**Gestión de Colegios (Grid):**
+- Debajo del Dashboard, se listan todos los colegios en forma de tarjetas (Cards).
+- El borde de cada tarjeta cambia de color (Verde, Amarillo, Rojo) basándose en el status del **último snapshot** subido.
+- Se pueden registrar, editar y **eliminar en cascada** (borrar un colegio elimina también sus contactos y reportes históricos para no dejar datos huérfanos).
 
-#### UI en Home
+### 2. Pestaña: Tendencias / Evolución Histórica (`EvolutionPage.jsx`)
+Vista diseñada para aislar a **un colegio en particular** y analizar su desempeño mes a mes.
 
-La parte superior de `SchoolsPage` muestra:
-
-- Título “Colegios” y una breve descripción.
-- Botón **“Agregar colegio”** → abre un modal para crear un nuevo colegio.
-
-Debajo, un grid de cards:
-
-- Cada card (`school-card`) muestra:
-  - Nombre, alias, país, sistema.
-  - Texto: “Click para ver detalles, editar o eliminar.”
-- El borde de la card toma un tinte según `lastSnapshotRisk`:
-  - `school-card-bajo` → borde verde suave (colegio “A tiempo”).
-  - `school-card-medio` → borde amarillo suave (“A reforzar”).
-  - `school-card-alto` → borde rojo suave (“Requiere atención inmediata”).
-- Click en la card → abre el **modal de detalle del colegio**.
-
-### Modal “Nuevo colegio”
-
-Campos:
-
-- Nombre del colegio (obligatorio).
-- Alias.
-- País (selector con países permitidos).
-- Sistema (selector con opciones predefinidas).
-
-Al enviar:
-
-- Crea el documento en `schools`.
-- Cierra el modal y muestra un toast de éxito.
+- **Selector Principal:** Desplegable para seleccionar el colegio a auditar.
+- **KPIs Históricos:** Calcula en tiempo real, basándose en la base de datos cronológica: *Mayor vitalidad del año, Menor vitalidad del año, y Tendencia matemática (creció vs cayó).*
+- **Gráfico de Área Continua:** Cruza en el tiempo la métrica de **Vitalidad Digital** (curva principal) vs la **Certificación Docente** (línea punteada) para entender si la capacitación impactó en el uso.
+- **Línea de Vida de Status:** Una tira de bloques de colores (semáforos) que resume visualmente la racha de rendimiento del colegio en el año.
+- **Historia Clínica / Hitos:** Un *feed* vertical similar a una red social que lista la fecha de cada snapshot y la **observación manual** dejada por el mentor.
+  - *Truncado Inteligente:* Si un mentor dejó un comentario larguísimo, el sistema lo corta a 100 caracteres e introduce un botón **"Ver más"**. Al hacer clic, se abre un modal de lectura placentera con todos los detalles.
+- **Exportación a PDF:** Usando `html2canvas` y `jsPDF`, esta vista incluye un botón para renderizar toda la pantalla de análisis en un archivo PDF listo para enviar por correo a los directivos.
 
 ---
 
-## Detalle de colegio (modal principal)
+## 📝 Gestión de Snapshots (Reportes)
 
-Al hacer click en un colegio se abre un modal grande (`modal-lg`) con:
+Los *Snapshots* son el corazón analítico. Representan el estado de un colegio luego de pedir un informe en las plataformas educativas.
+Se guardan en Firestore dentro de la subcolección `schools/{schoolId}/snapshots`.
 
-1. **Datos básicos del colegio** (Nombre, Alias, País, Sistema).
-2. **Snapshots del reporte** (historial de análisis).
-3. **Docentes y contactos** (personas clave del colegio).
+**Flujo de Análisis de un Snapshot Nuevo:**
+1. Clic en el colegio -> "Nuevo Snapshot".
+2. Seleccionar el `.csv` / `.xlsx` del colegio.
+3. Se envía al Backend (`FastAPI`) para parseo complejo de alumnos y docentes.
+4. El frontend recibe el JSON y despliega una **Vista Previa Editable**, separada en dos columnas:
+   * **Grupos de Alumnos:** Donde el mentor puede analizar métricas duras y asignar un semáforo interactivo por cada aula.
+   * **Docentes PLD:** Donde, interactuando con tooltips, se ve quién se certificó y en qué cursos.
+5. El mentor redacta una conclusión escrita y le asigna un **Nivel de Status** global al colegio (Verde/Amarillo/Rojo).
+6. Al "Guardar", se empaqueta todo el JSON y se envía a Firebase. Simultáneamente, el colegio padre actualiza su `lastSnapshotRisk` para alimentar instantáneamente el Dashboard Principal y acelerar los tiempos de carga.
 
-### 1. Snapshots del reporte
-
-Subcolección: `schools/{schoolId}/snapshots`
-
-Cada snapshot se guarda con:
-
-- `generatedAt`: fecha/hora proveniente del backend (`metadata.generated_at`) o `new Date()` si no viene.
-- `status`: `"bajo" | "medio" | "alto"` (se traduce a etiquetas “A tiempo”, “A reforzar”, “Requiere atención inmediata”).
-- `comments`: texto libre del mentor.
-- `backendPayload`: **respuesta completa** del backend FastAPI (JSON anidado: `metadata`, `students`, `teachers_pld`, etc.).
-
-En la UI dentro del modal del colegio:
-
-- Se listan todos los snapshots en orden cronológico (más recientes primero).
-- Cada fila muestra:
-  - Fecha formateada.
-  - Status del colegio.
-  - Botón para **eliminar** snapshot (con confirmación custom).
-- **Click en una fila** → abre el **modal de visualización de snapshot** en modo solo lectura.
-
-Además, hay un botón **“Nuevo snapshot”** para iniciar el flujo de análisis.
-
-### Flujo: crear un snapshot
-
-1. Desde el modal del colegio, clic en **“Nuevo snapshot”**.
-2. Se abre un **modal de snapshot** aún más grande (`modal-lg`, casi pantalla completa).
-3. Pasos dentro del modal:
-   - Subir archivo de reporte (CSV/Excel) con un `<input type="file">`.
-   - Enviar el archivo al backend FastAPI con `fetch` y `FormData`.
-   - Esperar la respuesta JSON.
-   - Renderizar una **vista previa editable** con:
-     - Comentarios del mentor.
-     - `Status del colegio` (A tiempo / A reforzar / Requiere atención inmediata).
-     - Tablas de **Grupos de alumnos** y **Docentes PLD**.
-   - Botón **“Guardar snapshot”**:
-     - Guarda en Firestore:
-       - Documento en `schools/{id}/snapshots`.
-       - Actualiza en el documento del colegio:
-         - `lastSnapshotRisk`
-         - `lastSnapshotAt`
-     - Muestra toast de éxito y cierra el modal.
+**Eliminación de Snapshots:**
+Se pueden eliminar individualmente desde el listado del colegio con una confirmación propia por seguridad.
 
 ---
 
-## Vista previa del snapshot
+## 👥 Modal de Contactos
 
-La vista previa es clave antes de guardar. Se organiza en dos columnas (`snapshot-columns`):
-
-- Columna izquierda (3fr): **Grupos de alumnos**.
-- Columna derecha (2fr): **Docentes PLD**.
-
-### Grupos de alumnos
-
-Fuente: `snapshotData.students.groups`.
-
-Cada fila de grupo muestra:
-
-- Nombre del grupo / ruta.
-- Métricas (ejemplos):
-  - `students_total`
-  - `students_with_progress`
-  - `students_completed`
-  - `courses_completion_percent`
-- **Semáforo manual**:
-  - Tres círculos (`status-dot`) en una columna “Semáforo”.
-  - Colores: verde, amarillo, rojo.
-  - El usuario elige color manualmente para cada grupo (estado **no se persiste**, es solo para análisis visual en el momento).
-
-### Docentes PLD
-
-Fuente: `snapshotData.teachers_pld.teachers`.
-
-Cada fila muestra:
-
-- Nombre del docente.
-- Email u otra identificación relevante.
-- Conteo de:
-  - **Certificaciones** (todas).
-  - **Completas**.
-
-Para las columnas de conteo:
-
-- Se muestra un número.
-- Si hay elementos:
-  - El `span` tiene clase `hint-hover` (cursor tipo ayuda).
-  - El atributo `title` contiene:
-    - Lista de `certification_name` para todas las certificaciones.
-    - Lista de `certification_name` de las completadas, respectivamente.
-  - Al pasar el mouse, el navegador muestra un tooltip nativo con el detalle.
+Alojado en `schools/{schoolId}/contacts`. Permite llevar una agenda de contactos directos (Rectores, coordinadores, docentes) con:
+- Formularios Modales desvinculados para que no "estorben" en la vista principal del colegio.
+- Roles dinámicos y números de WhatsApp a mano.
 
 ---
 
-## Status del colegio (riesgo)
+## 🚀 Cómo ejecutar el proyecto para Desarrollo
 
-En el formulario de snapshot:
+1. **Instalar dependencias:**
+   ```bash
+   npm install
+   ```
 
-- Campo **“Status del colegio”** sustituye a “Nivel de riesgo”.
-- Opciones (chips tipo botón):
-  - **A tiempo** → riesgo `bajo`.
-  - **A reforzar** → riesgo `medio`.
-  - **Requiere atención inmediata** → riesgo `alto`.
+2. **Configurar Firebase:**
+   - Crear un proyecto en Firebase (Database + Auth).
+   - Crear un archivo `.env` o sobreescribir las settings en `src/firebase.js`.
 
-Este valor se guarda dentro del snapshot y también se replica como `lastSnapshotRisk` en el documento del colegio para colorear las cards del home.
+3. **Backend:**
+   - Ejecutar la instancia paralela de FastAPI (generalmente en `http://localhost:8000`).
 
----
+4. **Ejecutar Frontend (Local):**
+   ```bash
+   npm run dev
+   ```
 
-## Contactos del colegio
-
-Subcolección: `schools/{schoolId}/contacts`
-
-Campos típicos de cada contacto:
-
-- `firstName`
-- `lastName`
-- `email`
-- `whatsapp`
-- `type` (selector: directivo, docente, coordinador, etc.).
-- `teaches` (booleano “Da clases” para tipos relevantes).
-
-UI en el modal de colegio:
-
-- Formulario para crear/editar contacto con los campos anteriores.
-- Tabla estilizada con:
-  - Columnas para nombre, rol, email, WhatsApp y “Da clases”.
-  - Botones de acción:
-    - Editar → rellena el formulario con los datos.
-    - Eliminar → muestra confirmación inline (no `window.confirm`).
-
----
-
-## Integración con backend FastAPI
-
-El backend se ejecuta de forma local (por ejemplo, en `http://localhost:8000`) y expone rutas para analizar reportes.
-
-En el frontend:
-
-- Se usa `fetch` con `FormData`:
-  - `formData.append("file", selectedFile)`.
-  - `fetch("http://localhost:8000/analyze-report", { method: "POST", body: formData })`.
-- Si la respuesta es `ok`, se parsea JSON y se almacena en estado (`snapshotData`).
-- Si hay error:
-  - Se muestra toast de error con mensaje comprensible (problema de conexión o error del backend).
-
-El JSON completo que devuelve el backend se guarda en el campo `backendPayload` del snapshot para poder re-visualizarlo luego en modo solo lectura.
-
----
-
-## Visualización de snapshots históricos
-
-Una vez que existen snapshots guardados:
-
-- Desde el modal del colegio, en la sección “Snapshots”:
-  - Se listan todos los registros con fecha y status.
-  - **Click en un snapshot**:
-    - Abre el mismo modal de snapshot pero en **modo vista**:
-      - Muestra toda la información tal cual se generó (a partir de `backendPayload`).
-      - Los campos son **solo lectura** (no se puede re-editar el snapshot).
-      - El botón principal es “Cerrar”.
-
-Esto permite ver la evolución del colegio a lo largo del ciclo lectivo, comparando snapshots antiguos con los más recientes.
-
----
-
-## UX y diseño
-
-Principios aplicados:
-
-- **Modo oscuro** coherente en toda la app.
-- Tipografía limpia, paddings generosos, modales grandes para evitar scrolleo excesivo.
-- Uso de:
-  - Cards clicables para colegios.
-  - Modales grandes para formularios y vistas de detalle.
-  - Tablas compactas para contactos y tablas de snapshot.
-  - Toasters (`react-hot-toast`) para feedback: éxito, error y estados de carga.
-- Todas las confirmaciones de borrado usan UI propia, nunca `window.confirm`.
-
----
-
-## Cómo ejecutar el proyecto
-
-1. Instalar dependencias:
-
-```bash
-npm install
-```
-
-2. Configurar Firebase:
-
-- Crear un proyecto en Firebase.
-- Habilitar:
-  - Authentication con proveedor Google.
-  - Firestore.
-- Crear un archivo `.env` o modificar directamente `firebase.js` con las claves de tu proyecto.
-- Configurar reglas de Firestore (como el ejemplo de arriba, ajustado a tu dominio).
-
-3. Levantar el backend FastAPI (ver README del backend).
-
-4. Ejecutar la app frontend:
-
-```bash
-npm run dev
-```
-
-5. Abrir la URL que indica Vite (típicamente `http://localhost:5173`).
-
-Iniciar sesión con una cuenta Google permitida por las reglas de Firestore y comenzar a crear colegios, contactos y snapshots.
-
+5. **Acceso:** Abrir `http://localhost:5173`. Iniciar sesión con una cuenta de Google cuyo dominio esté autorizado (Ej: `@digitalhouse.com`) en las reglas de seguridad de Firestore. 
