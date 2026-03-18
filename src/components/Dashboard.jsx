@@ -29,6 +29,7 @@ function Dashboard({ schools }) {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalTitle, setModalTitle] = React.useState('');
   const [filteredSchools, setFilteredSchools] = React.useState([]);
+  const [studentModalOpen, setStudentModalOpen] = React.useState(false);
 
   const stats = useMemo(() => {
     let total = schools.length;
@@ -44,6 +45,14 @@ function Dashboard({ schools }) {
     let statusAl = []; // Alto (Atención inmediata)
 
     const countryCounts = {};
+
+    const studentData = schools
+      .filter(s => s.lastSnapshotSummary?.total_students != null)
+      .map(s => ({
+        name: s.name,
+        students: s.lastSnapshotSummary.total_students,
+      }))
+      .sort((a, b) => b.students - a.students);
 
     schools.forEach((school) => {
       // 1. Conteo por sistema
@@ -134,6 +143,22 @@ function Dashboard({ schools }) {
           },
         ],
       },
+      
+      studentChartData: {
+        labels: studentData.map(s => s.name),
+        datasets: [
+          {
+            label: 'Alumnos por Colegio',
+            data: studentData.map(s => s.students),
+            backgroundColor: 'rgba(167, 139, 250, 0.7)', // Púrpura
+            borderColor: 'rgba(167, 139, 250, 1)',
+            borderWidth: 1,
+            borderRadius: 4,
+          },
+        ],
+      },
+      hasStudentData: studentData.length > 0,
+
       chartOptions: {
         responsive: true,
         maintainAspectRatio: false,
@@ -153,6 +178,18 @@ function Dashboard({ schools }) {
         },
         scales: {
           x: { grid: { color: gridColor }, ticks: { stepSize: 1 } },
+          y: { grid: { display: false } }
+        }
+      },
+      studentChartOptions: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { color: gridColor }, title: { display: true, text: 'Cantidad de Alumnos', color: '#9ca3af' } },
           y: { grid: { display: false } }
         }
       }
@@ -187,7 +224,7 @@ function Dashboard({ schools }) {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-kpi-row" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+      <div className="dashboard-kpi-row" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="dashboard-kpi-card">
           <span className="dashboard-kpi-title">Total Colegios</span>
           <span className="dashboard-kpi-value">{stats.total}</span>
@@ -201,6 +238,17 @@ function Dashboard({ schools }) {
           <div>
             <span className="dashboard-kpi-title">Arg. Nativa</span>
             <div className="dashboard-kpi-value">{stats.argNativa}</div>
+          </div>
+        </div>
+        <div 
+          className="dashboard-kpi-card clickable-kpi" 
+          onClick={() => setStudentModalOpen(true)}
+          style={{ border: '1px solid rgba(167, 139, 250, 0.3)' }}
+        >
+          <span className="dashboard-kpi-title">Distribución de Alumnos</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '0.25rem' }}>
+             <span className="dashboard-kpi-value" style={{ fontSize: '1.2rem', color: '#a78bfa' }}>Ver Gráfico</span>
+             <span style={{ fontSize: '1.5rem' }}>📊</span>
           </div>
         </div>
       </div>
@@ -292,6 +340,45 @@ function Dashboard({ schools }) {
                 <span className="chip-button active">{school.system || '—'}</span>
               </div>
             ))
+          )}
+        </div>
+      </Modal>
+
+      {/* MODAL PARA GRÁFICO DE ALUMNOS */}
+      <Modal
+        isOpen={studentModalOpen}
+        onClose={() => setStudentModalOpen(false)}
+        title="Distribución de Alumnos por Colegio"
+        size="lg"
+        footer={
+          <div className="form-actions" style={{ justifyContent: 'flex-end', width: '100%' }}>
+             <button type="button" className="secondary-button" onClick={() => setStudentModalOpen(false)}>
+                Cerrar
+             </button>
+          </div>
+        }
+      >
+        <div style={{ height: '70vh', minHeight: '400px', padding: '1rem' }}>
+          {stats.hasStudentData ? (
+            <Bar 
+              data={stats.studentChartData} 
+              options={{
+                ...stats.studentChartOptions,
+                plugins: {
+                  ...stats.studentChartOptions.plugins,
+                  tooltip: {
+                    callbacks: {
+                      label: (context) => `Alumnos: ${context.raw}`
+                    }
+                  }
+                }
+              }} 
+            />
+          ) : (
+            <div className="chart-placeholder">
+              <span>No hay datos de alumnos suficientes para generar la comparativa.</span>
+              <span className="placeholder-sub">Asegurate de que los colegios tengan al menos un snapshot guardado.</span>
+            </div>
           )}
         </div>
       </Modal>

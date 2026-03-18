@@ -34,6 +34,18 @@ const COUNTRY_OPTIONS = [
   "El Salvador",
 ];
 
+const COUNTRY_FLAGS = {
+  "Argentina": "🇦🇷",
+  "Brasil": "🇧🇷",
+  "Colombia": "🇨🇴",
+  "México": "🇲🇽",
+  "Uruguay": "🇺🇾",
+  "Chile": "🇨🇱",
+  "Honduras": "🇭🇳",
+  "Guatemala": "🇬🇹",
+  "El Salvador": "🇸🇻",
+};
+
 const CONTACT_TYPE_OPTIONS = [
   "Docente",
   "Coordinador",
@@ -421,7 +433,8 @@ function SchoolsPage() {
       const formData = new FormData();
       formData.append("file", snapshotFile);
 
-      const response = await fetch("http://127.0.0.1:8000/analyze-report", {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+      const response = await fetch(`${apiBaseUrl}/analyze-report`, {
         method: "POST",
         body: formData,
       });
@@ -577,9 +590,15 @@ function SchoolsPage() {
                 )}
               </div>
               <div className="school-card-meta">
-                <span>{school.country || "Sin país"}</span>
-                <span>•</span>
-                <span>{school.system || "Sin sistema"}</span>
+                <span className="school-card-flag" title={school.country}>
+                  {COUNTRY_FLAGS[school.country] || "🌐"}
+                </span>
+                <span className="school-card-system">{school.system || "—"}</span>
+                {school.lastSnapshotSummary?.total_students != null && (
+                  <span className="school-card-students">
+                    👨‍🎓 {school.lastSnapshotSummary.total_students}
+                  </span>
+                )}
               </div>
               <p className="school-card-hint">
                 Click para ver detalles, editar o eliminar.

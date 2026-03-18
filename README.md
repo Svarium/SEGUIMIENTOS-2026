@@ -94,7 +94,12 @@ Alojado en `schools/{schoolId}/contacts`. Permite llevar una agenda de contactos
    npm install
    ```
 
-2. **Configurar Firebase:**
+2. **Configurar Variables de Entorno:**
+   - Creá un archivo `.env` en la raíz (se ha creado uno por defecto).
+   - Definí `VITE_API_BASE_URL=https://automatic-report-backend.onrender.com`.
+   - Si necesitás volver al backend local, podés cambiarlo a `http://127.0.0.1:8000`.
+
+3. **Configurar Firebase:**
    - Crear un proyecto en Firebase (Database + Auth).
    - Crear un archivo `.env` o sobreescribir las settings en `src/firebase.js`.
 
