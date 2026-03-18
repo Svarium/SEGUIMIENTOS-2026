@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { db } from "./firebase";
 import {
   collection,
@@ -11,6 +11,7 @@ import {
   deleteDoc,
   updateDoc,
   getDocs,
+  setDoc,
 } from "firebase/firestore";
 import toast from "react-hot-toast";
 import Modal from "./Modal";
@@ -64,7 +65,22 @@ function SchoolsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [confirmDeleteSchoolId, setConfirmDeleteSchoolId] = useState(null);
+
+  // Filtros de la grilla
+  const [filterCountry, setFilterCountry] = useState("");
+  const [filterSystem, setFilterSystem] = useState("");
+
+  // Estado para creación/edición de colegio
+  const [isEditingSchool, setIsEditingSchool] = useState(false);
+  const [editingSchoolId, setEditingSchoolId] = useState(null);
+  const [schoolForm, setSchoolForm] = useState({
+    name: "",
+    alias: "",
+    country: "Argentina",
+    system: "Santillana",
+  });
 
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
@@ -80,16 +96,8 @@ function SchoolsPage() {
     teaches: true,
   });
 
-  const [form, setForm] = useState({
-    name: "",
-    alias: "",
-    country: "Argentina",
-    system: "Argentina Nativa",
-  });
-
   const [snapshots, setSnapshots] = useState([]);
   const [snapshotsLoading, setSnapshotsLoading] = useState(false);
-  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
   const [snapshotFile, setSnapshotFile] = useState(null);
   const [snapshotUploading, setSnapshotUploading] = useState(false);
   const [snapshotSaving, setSnapshotSaving] = useState(false);
@@ -127,7 +135,7 @@ function SchoolsPage() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setSchoolForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleContactChange = (event) => {
@@ -158,46 +166,95 @@ function SchoolsPage() {
     resetContactForm();
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    if (!form.name.trim()) {
+  // Computar colegios filtrados
+  const filteredSchools = useMemo(() => {
+    return schools.filter((s) => {
+      const matchCountry = !filterCountry || s.country === filterCountry;
+      const matchSystem = !filterSystem || s.system === filterSystem;
+      return matchCountry && matchSystem;
+    });
+  }, [schools, filterCountry, filterSystem]);
+
+  const handleOpenCreateModal = () => {
+    setIsEditingSchool(false);
+    setEditingSchoolId(null);
+    setSchoolForm({
+      name: "",
+      alias: "",
+      country: "Argentina",
+      system: "Santillana",
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleOpenEditSchoolModal = () => {
+    if (!selectedSchool) return;
+    setIsEditingSchool(true);
+    setEditingSchoolId(selectedSchool.id);
+    setSchoolForm({
+      name: selectedSchool.name || "",
+      alias: selectedSchool.alias || "",
+      country: selectedSchool.country || "Argentina",
+      system: selectedSchool.system || "Santillana",
+    });
+    setShowDetailModal(false); // Cerrar detalle para ver el form de edición
+    setShowCreateModal(true);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!schoolForm.name.trim()) {
       toast.error("El nombre del colegio es obligatorio.");
       return;
     }
 
     try {
       setSaving(true);
-      const colRef = collection(db, "schools");
-      await addDoc(colRef, {
-        name: form.name.trim(),
-        alias: form.alias.trim() || null,
-        country: form.country || null,
-        system: form.system,
-        createdAt: serverTimestamp(),
-      });
-      setForm({
+      if (isEditingSchool && editingSchoolId) {
+        // Actualizar colegio existente
+        const schoolDocRef = doc(db, "schools", editingSchoolId);
+        await updateDoc(schoolDocRef, {
+          name: schoolForm.name,
+          alias: schoolForm.alias,
+          country: schoolForm.country,
+          system: schoolForm.system,
+        });
+        toast.success("Información del colegio actualizada.");
+
+        // Actualizar el estado de selectedSchool si es el que estamos editando
+        if (selectedSchool?.id === editingSchoolId) {
+          setSelectedSchool(prev => ({
+            ...prev,
+            ...schoolForm
+          }));
+        }
+      } else {
+        // Crear nuevo colegio
+        const newSchoolRef = doc(collection(db, "schools"));
+        await setDoc(newSchoolRef, {
+          ...schoolForm,
+          createdAt: serverTimestamp(),
+          lastSnapshotRisk: null,
+          lastSnapshotAt: null,
+          lastSnapshotSummary: null,
+        });
+        toast.success("Colegio agregado con éxito.");
+      }
+      setShowCreateModal(false);
+      setIsEditingSchool(false);
+      setEditingSchoolId(null);
+      setSchoolForm({
         name: "",
         alias: "",
         country: "Argentina",
-        system: "Argentina Nativa",
+        system: "Santillana",
       });
-      toast.success("Colegio creado correctamente.");
     } catch (error) {
-      console.error("Error al crear colegio:", error);
-      toast.error("No se pudo crear el colegio.");
+      console.error("Error al persistir colegio:", error);
+      toast.error("Hubo un problema al guardar los cambios.");
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleOpenCreateModal = () => {
-    setForm({
-      name: "",
-      alias: "",
-      country: "Argentina",
-      system: "Argentina Nativa",
-    });
-    setShowCreateModal(true);
   };
 
   const handleOpenDetailModal = (school) => {
@@ -209,8 +266,11 @@ function SchoolsPage() {
     setShowCreateModal(false);
     setShowDetailModal(false);
     setShowContactModal(false);
+    setShowSnapshotModal(false);
     setSelectedSchool(null);
-    setConfirmingDelete(false);
+    setIsEditingSchool(false);
+    setEditingSchoolId(null);
+    setConfirmDeleteSchoolId(null);
     setContacts([]);
     setContactsLoading(false);
     resetContactForm();
@@ -272,16 +332,15 @@ function SchoolsPage() {
   }, [showDetailModal, selectedSchool?.id]);
 
   const handleDeleteSelectedSchool = async () => {
-    if (!selectedSchool) return;
+    if (!selectedSchool || !confirmDeleteSchoolId) return;
 
     try {
-      // Usar toast.promise si lo prefieres, pero un toast estático para dar feedback sirve
       const toastId = toast.loading("Eliminando colegio y sus datos...");
-      
-      const schoolRef = doc(db, "schools", selectedSchool.id);
-      
+
+      const schoolRef = doc(db, "schools", confirmDeleteSchoolId);
+
       // Obtener y eliminar todos los contactos
-      const contactsRef = collection(db, "schools", selectedSchool.id, "contacts");
+      const contactsRef = collection(db, "schools", confirmDeleteSchoolId, "contacts");
       const contactsSnap = await getDocs(contactsRef);
       const deletePromises = [];
       contactsSnap.forEach((docSnap) => {
@@ -289,7 +348,7 @@ function SchoolsPage() {
       });
 
       // Obtener y eliminar todos los snapshots
-      const snapshotsRef = collection(db, "schools", selectedSchool.id, "snapshots");
+      const snapshotsRef = collection(db, "schools", confirmDeleteSchoolId, "snapshots");
       const snapshotsSnap = await getDocs(snapshotsRef);
       snapshotsSnap.forEach((docSnap) => {
         deletePromises.push(deleteDoc(docSnap.ref));
@@ -297,7 +356,7 @@ function SchoolsPage() {
 
       // Ejecutar borrados en paralelo
       await Promise.all(deletePromises);
-      
+
       // Borrar el colegio padre
       await deleteDoc(schoolRef);
 
@@ -563,16 +622,64 @@ function SchoolsPage() {
 
       <Dashboard schools={schools} />
 
+      <div className="filters-bar">
+        <div className="filter-group">
+          <label className="filter-label">Filtrar por País</label>
+          <select
+            className="filter-select"
+            value={filterCountry}
+            onChange={(e) => setFilterCountry(e.target.value)}
+          >
+            <option value="">🌎 Todos los países</option>
+            {COUNTRY_OPTIONS.map(c => (
+              <option key={c} value={c}>{COUNTRY_FLAGS[c]} {c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label className="filter-label">Filtrar por Sistema</label>
+          <select
+            className="filter-select"
+            value={filterSystem}
+            onChange={(e) => setFilterSystem(e.target.value)}
+          >
+            <option value="">🔄 Todos los sistemas</option>
+            {SYSTEM_OPTIONS.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+
+        {(filterCountry || filterSystem) && (
+          <button
+            className="link-button"
+            style={{ marginTop: 'auto', paddingBottom: '0.4rem' }}
+            onClick={() => { setFilterCountry(""); setFilterSystem(""); }}
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
       <section className="schools-grid">
         {loading ? (
           <p className="app-text-muted">Cargando colegios...</p>
-        ) : schools.length === 0 ? (
-          <p className="app-text-muted">
-            Todavía no hay colegios cargados. Usá el botón "Agregar colegio"
-            para crear el primero.
-          </p>
+        ) : filteredSchools.length === 0 ? (
+          <div className="chart-placeholder" style={{ gridColumn: '1 / -1', minHeight: '150px' }}>
+            <span>No se encontraron colegios con estos filtros.</span>
+            {(filterCountry || filterSystem) && (
+              <button
+                className="primary-button"
+                style={{ marginTop: '1rem' }}
+                onClick={() => { setFilterCountry(""); setFilterSystem(""); }}
+              >
+                Ver todos los colegios
+              </button>
+            )}
+          </div>
         ) : (
-          schools.map((school) => (
+          filteredSchools.map((school) => (
             <button
               key={school.id}
               type="button"
@@ -608,9 +715,10 @@ function SchoolsPage() {
         )}
       </section>
 
+      {/* CREATE / EDIT SCHOOL MODAL */}
       <Modal
         isOpen={showCreateModal}
-        title="Nuevo colegio"
+        title={isEditingSchool ? "Editar Información del Colegio" : "Nuevo colegio"}
         onClose={handleCloseModals}
         footer={
           <div className="modal-footer-spread">
@@ -618,16 +726,17 @@ function SchoolsPage() {
               type="button"
               className="secondary-button"
               onClick={handleCloseModals}
+              disabled={saving}
             >
               Cancelar
             </button>
             <button
-              className="primary-button"
               type="submit"
               form="create-school-form"
+              className="primary-button"
               disabled={saving}
             >
-              {saving ? "Guardando..." : "Crear colegio"}
+              {saving ? "Guardando..." : isEditingSchool ? "Guardar cambios" : "Agregar colegio"}
             </button>
           </div>
         }
@@ -640,7 +749,7 @@ function SchoolsPage() {
                 className="form-input"
                 type="text"
                 name="name"
-                value={form.name}
+                value={schoolForm.name}
                 onChange={handleChange}
                 placeholder="Ej: Gimnasio Cristophoro Colombo"
                 required
@@ -655,7 +764,7 @@ function SchoolsPage() {
                 className="form-input"
                 type="text"
                 name="alias"
-                value={form.alias}
+                value={schoolForm.alias}
                 onChange={handleChange}
                 placeholder="Ej: GCC"
               />
@@ -666,7 +775,7 @@ function SchoolsPage() {
               <select
                 className="form-input"
                 name="country"
-                value={form.country}
+                value={schoolForm.country}
                 onChange={handleChange}
               >
                 {COUNTRY_OPTIONS.map((option) => (
@@ -684,7 +793,7 @@ function SchoolsPage() {
               <select
                 className="form-input"
                 name="system"
-                value={form.system}
+                value={schoolForm.system}
                 onChange={handleChange}
               >
                 {SYSTEM_OPTIONS.map((option) => (
@@ -700,17 +809,21 @@ function SchoolsPage() {
 
       <Modal
         isOpen={showDetailModal && !!selectedSchool}
-        title={selectedSchool ? selectedSchool.name : "Detalle de colegio"}
+        title="Detalles del colegio"
         onClose={handleCloseModals}
         size="lg"
         footer={
           <div className="modal-footer-spread">
-            <div className="delete-confirm-area">
-              {confirmingDelete ? (
-                <>
-                  <span className="delete-confirm-text">
-                    ¿Eliminar este colegio? Esta acción no se puede deshacer.
-                  </span>
+            <div className="form-actions" style={{ gap: "0.5rem" }}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleOpenEditSchoolModal}
+              >
+                ✏️ Editar Información
+              </button>
+              {confirmDeleteSchoolId === selectedSchool?.id ? (
+                <div className="inline-confirm">
                   <button
                     type="button"
                     className="danger-button"
@@ -721,24 +834,24 @@ function SchoolsPage() {
                   <button
                     type="button"
                     className="secondary-button"
-                    onClick={() => setConfirmingDelete(false)}
+                    onClick={() => setConfirmDeleteSchoolId(null)}
                   >
                     Cancelar
                   </button>
-                </>
+                </div>
               ) : (
                 <button
                   type="button"
                   className="danger-button"
-                  onClick={() => setConfirmingDelete(true)}
+                  onClick={() => setConfirmDeleteSchoolId(selectedSchool.id)}
                 >
-                  Eliminar colegio
+                  🗑️ Eliminar
                 </button>
               )}
             </div>
             <button
               type="button"
-              className="secondary-button"
+              className="primary-button"
               onClick={handleCloseModals}
             >
               Cerrar
