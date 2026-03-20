@@ -502,8 +502,8 @@
 .contacts-table-header,
 .contacts-table-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1.4fr 1.1fr 0.8fr 1.2fr;
-  gap: 0.75rem;
+  grid-template-columns: 1.2fr 0.8fr 1.8fr 1.2fr 0.7fr 1fr;
+  gap: 0.6rem;
   padding: 0.55rem 0.9rem;
   align-items: center;
 }
@@ -556,6 +556,68 @@
   gap: 0.4rem;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.contact-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.contact-text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+  font-size: 1rem;
+}
+
+.icon-btn:hover {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.whatsapp-link {
+  color: #22c55e;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+.whatsapp-link:hover {
+  text-decoration: underline;
+}
+
+.comment-area {
+  width: 100%;
+  background-color: #020617;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 0.5rem;
+  color: #e5e7eb;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 150px;
+  outline: none;
+}
+
+.comment-area:focus {
+  border-color: #22d3ee;
 }
 .app-title {
   font-size: 1.4rem;

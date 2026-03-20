@@ -66,6 +66,7 @@ function SchoolsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [confirmDeleteSchoolId, setConfirmDeleteSchoolId] = useState(null);
 
   // Filtros de la grilla
@@ -80,6 +81,7 @@ function SchoolsPage() {
     alias: "",
     country: "Argentina",
     system: "Santillana",
+    generalComments: "",
   });
 
   const [contacts, setContacts] = useState([]);
@@ -248,6 +250,7 @@ function SchoolsPage() {
         alias: "",
         country: "Argentina",
         system: "Santillana",
+        generalComments: "",
       });
     } catch (error) {
       console.error("Error al persistir colegio:", error);
@@ -267,6 +270,7 @@ function SchoolsPage() {
     setShowDetailModal(false);
     setShowContactModal(false);
     setShowSnapshotModal(false);
+    setShowCommentsModal(false);
     setSelectedSchool(null);
     setIsEditingSchool(false);
     setEditingSchoolId(null);
@@ -275,6 +279,46 @@ function SchoolsPage() {
     setContactsLoading(false);
     resetContactForm();
     setConfirmDeleteSnapshotId(null);
+  };
+
+  const handleCopyEmail = (email) => {
+    if (!email) return;
+    navigator.clipboard.writeText(email);
+    toast.success("Email copiado al portapapeles");
+  };
+
+  const handleOpenCommentsModal = () => {
+    if (!selectedSchool) return;
+    setSchoolForm((prev) => ({
+      ...prev,
+      generalComments: selectedSchool.generalComments || "",
+    }));
+    setShowCommentsModal(true);
+  };
+
+  const handleUpdateSchoolComments = async (e) => {
+    e.preventDefault();
+    if (!selectedSchool) return;
+
+    try {
+      setSaving(true);
+      const schoolDocRef = doc(db, "schools", selectedSchool.id);
+      await updateDoc(schoolDocRef, {
+        generalComments: schoolForm.generalComments,
+      });
+      // Actualizar el estado local
+      setSelectedSchool((prev) => ({
+        ...prev,
+        generalComments: schoolForm.generalComments,
+      }));
+      toast.success("Comentarios actualizados.");
+      setShowCommentsModal(false);
+    } catch (error) {
+      console.error("Error al actualizar comentarios:", error);
+      toast.error("No se pudieron guardar los comentarios.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -886,6 +930,17 @@ function SchoolsPage() {
                   {selectedSchool.system || "—"}
                 </span>
               </div>
+              <div className="school-detail-block">
+                <span className="school-detail-label">Notas rápidas</span>
+                <button
+                  type="button"
+                  className="link-button"
+                  style={{ justifyContent: "flex-start", paddingLeft: 0, color: "#22d3ee" }}
+                  onClick={handleOpenCommentsModal}
+                >
+                  📝 Ver / Editar Comentarios
+                </button>
+              </div>
             </div>
 
             {/* SECOND SECTION: CONTACTS */}
@@ -927,10 +982,36 @@ function SchoolsPage() {
                       );
                       return (
                         <div key={c.id} className="contacts-table-row">
-                          <span>{fullName || "—"}</span>
+                          <span className="contact-text-truncate" title={fullName}>{fullName || "—"}</span>
                           <span>{c.contactType || "—"}</span>
-                          <span>{c.email || "—"}</span>
-                          <span>{c.whatsapp || "—"}</span>
+                          <div className="contact-info-cell">
+                            <span className="contact-text-truncate" title={c.email}>{c.email || "—"}</span>
+                            {c.email && (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => handleCopyEmail(c.email)}
+                                title="Copiar email"
+                              >
+                                📋
+                              </button>
+                            )}
+                          </div>
+                          <div className="contact-info-cell">
+                            {c.whatsapp ? (
+                              <a
+                                href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="whatsapp-link"
+                                title="Escribir por WhatsApp"
+                              >
+                                💬 {c.whatsapp}
+                              </a>
+                            ) : (
+                              <span className="app-text-muted">—</span>
+                            )}
+                          </div>
                           <span>
                             {showTeaches
                               ? c.teaches
@@ -1496,6 +1577,44 @@ function SchoolsPage() {
               </div>
             </section>
           )}
+        </div>
+      </Modal>
+
+      {/* COMMENTS MODAL */}
+      <Modal
+        isOpen={showCommentsModal}
+        title={`Notas rápidas: ${selectedSchool?.name}`}
+        onClose={() => setShowCommentsModal(false)}
+        footer={
+          <div className="modal-footer-spread">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setShowCommentsModal(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleUpdateSchoolComments}
+              disabled={saving}
+            >
+              {saving ? "Guardando..." : "Guardar notas"}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ padding: "0.5rem 0" }}>
+          <p className="app-text" style={{ marginBottom: "1rem" }}>
+            Estas notas son generales del colegio y sirven para seguimiento interno.
+          </p>
+          <textarea
+            className="comment-area"
+            value={schoolForm.generalComments}
+            onChange={(e) => setSchoolForm(prev => ({ ...prev, generalComments: e.target.value }))}
+            placeholder="Escribí acá cualquier anotación importante sobre el colegio..."
+          />
         </div>
       </Modal>
     </>
