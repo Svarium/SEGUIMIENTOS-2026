@@ -1360,16 +1360,10 @@ function SchoolsPage() {
                           <span>{g.route_name}</span>
                           <span>{g.students_count}</span>
                           <span>
-                            {g.metrics?.classes_completion_percent != null
-                              ? g.metrics.classes_completion_percent.toFixed(1)
-                              : "—"}
+                            {g.metrics?.classes_completion_percent || "—"}
                           </span>
                           <span>
-                            {g.metrics?.courses_completion_percent != null
-                              ? `${g.metrics.courses_completion_percent.toFixed(
-                                  1
-                                )}%`
-                              : "—"}
+                            {g.metrics?.courses_completion_percent || "—"}
                           </span>
                           <span>
                             {g.metrics?.digital_vitality_30d_percent != null
