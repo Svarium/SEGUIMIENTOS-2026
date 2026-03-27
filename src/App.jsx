@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import AuthGate from "./AuthGate";
 import SchoolsPage from "./SchoolsPage";
 import EvolutionPage from "./EvolutionPage";
+import TeachersPage from "./TeachersPage";
 import "./App.css";
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
               <Route path="/" element={<Navigate to="/schools" replace />} />
               <Route path="/schools" element={<SchoolsPage />} />
               <Route path="/evolution" element={<EvolutionPage />} />
+              <Route path="/teachers" element={<TeachersPage />} />
             </Routes>
           </div>
         </div>

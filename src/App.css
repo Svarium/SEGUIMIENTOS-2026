@@ -1178,6 +1178,24 @@
   box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.3);
 }
 
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.9rem;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.search-input {
+  padding-left: 2.2rem !important;
+}
+
 .chart-placeholder {
   display: flex;
   flex-direction: column;

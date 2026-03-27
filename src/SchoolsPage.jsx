@@ -72,6 +72,7 @@ function SchoolsPage() {
   // Filtros de la grilla
   const [filterCountry, setFilterCountry] = useState("");
   const [filterSystem, setFilterSystem] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Estado para creación/edición de colegio
   const [isEditingSchool, setIsEditingSchool] = useState(false);
@@ -173,9 +174,12 @@ function SchoolsPage() {
     return schools.filter((s) => {
       const matchCountry = !filterCountry || s.country === filterCountry;
       const matchSystem = !filterSystem || s.system === filterSystem;
-      return matchCountry && matchSystem;
+      const matchSearch = !searchTerm || 
+        s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.alias?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchCountry && matchSystem && matchSearch;
     });
-  }, [schools, filterCountry, filterSystem]);
+  }, [schools, filterCountry, filterSystem, searchTerm]);
 
   const handleOpenCreateModal = () => {
     setIsEditingSchool(false);
@@ -667,6 +671,21 @@ function SchoolsPage() {
       <Dashboard schools={schools} />
 
       <div className="filters-bar">
+        <div className="filter-group" style={{ flex: 1, minWidth: '250px' }}>
+          <label className="filter-label">Buscar Colegio</label>
+          <div className="search-input-wrapper">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              className="filter-select search-input"
+              placeholder="Nombre o alias..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+
         <div className="filter-group">
           <label className="filter-label">Filtrar por País</label>
           <select

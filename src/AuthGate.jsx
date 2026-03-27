@@ -82,6 +82,12 @@ function AuthGate({ children }) {
             >
               Tendencias
             </NavLink>
+            <NavLink 
+              to="/teachers" 
+              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+            >
+              Docentes
+            </NavLink>
           </nav>
         </div>
         <div style={styles.userSection}>
