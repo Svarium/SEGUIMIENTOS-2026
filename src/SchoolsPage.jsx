@@ -16,6 +16,7 @@ import {
 import toast from "react-hot-toast";
 import Modal from "./Modal";
 import Dashboard from "./components/Dashboard";
+import { EMAIL_TEMPLATES, openGmailCompose } from "./services/emailTemplates";
 
 const SYSTEM_OPTIONS = [
   "Argentina Nativa",
@@ -67,6 +68,8 @@ function SchoolsPage() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSnapshotModal, setShowSnapshotModal] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [showEmailTemplateModal, setShowEmailTemplateModal] = useState(false);
+  const [selectedContactForEmail, setSelectedContactForEmail] = useState(null);
   const [confirmDeleteSchoolId, setConfirmDeleteSchoolId] = useState(null);
 
   // Filtros de la grilla
@@ -1005,15 +1008,29 @@ function SchoolsPage() {
                           <span>{c.contactType || "—"}</span>
                           <div className="contact-info-cell">
                             <span className="contact-text-truncate" title={c.email}>{c.email || "—"}</span>
-                            {c.email && (
-                              <button
-                                type="button"
-                                className="icon-btn"
-                                onClick={() => handleCopyEmail(c.email)}
-                                title="Copiar email"
-                              >
-                                📋
-                              </button>
+                             {c.email && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={() => handleCopyEmail(c.email)}
+                                  title="Copiar email"
+                                >
+                                  📋
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  onClick={() => {
+                                    setSelectedContactForEmail(c);
+                                    setShowEmailTemplateModal(true);
+                                  }}
+                                  title="Enviar email (Gmail)"
+                                  style={{ color: '#ef4444' }}
+                                >
+                                  ✉️
+                                </button>
+                              </>
                             )}
                           </div>
                           <div className="contact-info-cell">
@@ -1634,6 +1651,41 @@ function SchoolsPage() {
             onChange={(e) => setSchoolForm(prev => ({ ...prev, generalComments: e.target.value }))}
             placeholder="Escribí acá cualquier anotación importante sobre el colegio..."
           />
+        </div>
+      </Modal>
+
+      {/* EMAIL TEMPLATES MODAL */}
+      <Modal
+        isOpen={showEmailTemplateModal}
+        title="Seleccionar Plantilla de Email"
+        onClose={() => setShowEmailTemplateModal(false)}
+        footer={
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setShowEmailTemplateModal(false)}
+          >
+            Cerrar
+          </button>
+        }
+      >
+        <div className="template-list">
+          {EMAIL_TEMPLATES.map((tmpl) => (
+            <button
+              key={tmpl.id}
+              className="template-item"
+              onClick={() => {
+                openGmailCompose(selectedContactForEmail, selectedSchool?.name || "DH Schools", tmpl);
+                setShowEmailTemplateModal(false);
+              }}
+            >
+              <div className="template-item-content">
+                <span className="template-label">{tmpl.label}</span>
+                <span className="template-subject">Asunto: {tmpl.subject.replace("{nombre_colegio}", selectedSchool?.name || "...")}</span>
+              </div>
+              <span className="template-arrow">→</span>
+            </button>
+          ))}
         </div>
       </Modal>
     </>

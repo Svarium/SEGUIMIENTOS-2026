@@ -8,6 +8,8 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import toast from "react-hot-toast";
+import Modal from "./Modal";
+import { EMAIL_TEMPLATES, openGmailCompose } from "./services/emailTemplates";
 
 const CONTACT_TYPE_COLORS = {
   "Docente": "#22d3ee",
@@ -23,6 +25,8 @@ function TeachersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [showEmailTemplateModal, setShowEmailTemplateModal] = useState(false);
+  const [selectedContactForEmail, setSelectedContactForEmail] = useState(null);
 
   // 1. Cargar mapeo de colegios para saber de dónde viene cada docente
   useEffect(() => {
@@ -181,14 +185,28 @@ function TeachersPage() {
                   <div className="contact-info-cell">
                     <span className="contact-text-truncate" title={t.email}>{t.email || "—"}</span>
                     {t.email && (
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => handleCopyEmail(t.email)}
-                        title="Copiar email"
-                      >
-                        📋
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => handleCopyEmail(t.email)}
+                          title="Copiar email"
+                        >
+                          📋
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => {
+                            setSelectedContactForEmail(t);
+                            setShowEmailTemplateModal(true);
+                          }}
+                          title="Enviar email (Gmail)"
+                          style={{ color: '#ef4444' }}
+                        >
+                          ✉️
+                        </button>
+                      </>
                     )}
                   </div>
                   <div className="contact-info-cell">
@@ -215,6 +233,46 @@ function TeachersPage() {
           )}
         </div>
       )}
+
+      {/* EMAIL TEMPLATES MODAL */}
+      <Modal
+        isOpen={showEmailTemplateModal}
+        title="Seleccionar Plantilla de Email"
+        onClose={() => setShowEmailTemplateModal(false)}
+        footer={
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setShowEmailTemplateModal(false)}
+          >
+            Cerrar
+          </button>
+        }
+      >
+        <div className="template-list">
+          {EMAIL_TEMPLATES.map((tmpl) => {
+            const schoolName = schoolsMap[selectedContactForEmail?.schoolId] || "DH Schools";
+            return (
+              <button
+                key={tmpl.id}
+                className="template-item"
+                onClick={() => {
+                  openGmailCompose(selectedContactForEmail, schoolName, tmpl);
+                  setShowEmailTemplateModal(false);
+                }}
+              >
+                <div className="template-item-content">
+                  <span className="template-label">{tmpl.label}</span>
+                  <span className="template-subject">
+                    Asunto: {tmpl.subject.replace("{nombre_colegio}", schoolName)}
+                  </span>
+                </div>
+                <span className="template-arrow">→</span>
+              </button>
+            );
+          })}
+        </div>
+      </Modal>
     </div>
   );
 }
