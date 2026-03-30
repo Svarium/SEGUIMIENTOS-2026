@@ -7,10 +7,13 @@ import {
   onAuthStateChanged,
 } from "./firebase";
 import { NavLink } from "react-router-dom";
+import ReminderSystem from "./components/ReminderSystem";
 
 function AuthGate({ children }) {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const [showReminders, setShowReminders] = useState(false);
+  const [remindersCount, setRemindersCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -91,6 +94,23 @@ function AuthGate({ children }) {
           </nav>
         </div>
         <div style={styles.userSection}>
+          {/* BOTÓN DE RECORDATORIOS */}
+          <div style={{ position: "relative" }}>
+            <button 
+              className="bell-btn" 
+              onClick={() => setShowReminders(!showReminders)}
+              title="Recordatorios"
+            >
+              🔔
+              {remindersCount > 0 && <span className="bell-badge">{remindersCount}</span>}
+            </button>
+            <ReminderSystem 
+              isOpen={showReminders} 
+              onClose={() => setShowReminders(false)} 
+              onCountChange={setRemindersCount}
+            />
+          </div>
+
           {user.photoURL && (
             <img 
               src={user.photoURL} 
