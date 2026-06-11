@@ -602,6 +602,7 @@ function SchoolsPage() {
         riskLevel: snapshotRisk,
         comments: snapshotComments.trim() || null,
         summary,
+        groupStatuses,
         backendPayload: snapshotData,
       });
 
@@ -636,7 +637,7 @@ function SchoolsPage() {
     setSnapshotData(snapshot.backendPayload);
     setSnapshotComments(snapshot.comments || "");
     setSnapshotRisk(snapshot.riskLevel || "medio");
-    setGroupStatuses({});
+    setGroupStatuses(snapshot.groupStatuses || {});
     setConfirmDeleteSnapshotId(null);
     setShowSnapshotModal(true);
   };
