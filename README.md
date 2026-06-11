@@ -51,9 +51,9 @@ Vista diseñada para aislar a **un colegio en particular** y analizar su desempe
 
 - **Selector Principal:** Desplegable para seleccionar el colegio a auditar.
 - **KPIs Históricos:** Calcula en tiempo real, basándose en la base de datos cronológica: *Mayor vitalidad del año, Menor vitalidad del año, y Tendencia matemática (creció vs cayó).*
-- **Gráfico de Área Continua:** Cruza en el tiempo la métrica de **Vitalidad Digital** (curva principal) vs la **Certificación Docente** (línea punteada) para entender si la capacitación impactó en el uso.
+- **Gráfico de Área Continua:** Cruza en el tiempo tres métricas fundamentales: **Vitalidad Digital** (curva principal), **Certificación Docente** (línea punteada) y **Completitud de Cursos Obligatorios** (línea punteada amarilla) para entender la correlación entre variables de uso a lo largo del año.
 - **Línea de Vida de Status:** Una tira de bloques de colores (semáforos) que resume visualmente la racha de rendimiento del colegio en el año.
-- **Historia Clínica / Hitos:** Un *feed* vertical similar a una red social que lista la fecha de cada snapshot y la **observación manual** dejada por el mentor.
+- **Historia Clínica / Hitos:** Un *feed* vertical similar a una red social que lista la fecha de cada snapshot, los indicadores duros de ese reporte (*Vit, Cert, Cursos Oblig.*) y la **observación manual** dejada por el mentor.
   - *Truncado Inteligente:* Si un mentor dejó un comentario larguísimo, el sistema lo corta a 100 caracteres e introduce un botón **"Ver más"**. Al hacer clic, se abre un modal de lectura placentera con todos los detalles.
 - **Exportación a PDF:** Usando `html2canvas` y `jsPDF`, esta vista incluye un botón para renderizar toda la pantalla de análisis en un archivo PDF listo para enviar por correo a los directivos.
 
@@ -68,8 +68,8 @@ Se guardan en Firestore dentro de la subcolección `schools/{schoolId}/snapshots
 1. Clic en el colegio -> "Nuevo Snapshot".
 2. Seleccionar el `.csv` / `.xlsx` del colegio.
 3. Se envía al Backend (`FastAPI`) para parseo complejo de alumnos y docentes.
-4. El frontend recibe el JSON y despliega una **Vista Previa Editable**, separada en dos columnas:
-   * **Grupos de Alumnos:** Donde el mentor puede analizar métricas duras y asignar un semáforo interactivo por cada aula.
+4. El frontend recibe el JSON y despliega una **Vista Previa Editable**, donde se agregan KPIs como *% Cursos Obligatorios Completos*. Está separada en dos columnas:
+   * **Grupos de Alumnos:** Donde el mentor puede analizar métricas dinámicas detalladas (Vitalidad 30d, Progreso 30d, Progreso 15d, Cursos obligatorios) y asignar un semáforo interactivo por cada aula.
    * **Docentes PLD:** Donde, interactuando con tooltips, se ve quién se certificó y en qué cursos.
 5. El mentor redacta una conclusión escrita y le asigna un **Nivel de Status** global al colegio (Verde/Amarillo/Rojo).
 6. Al "Guardar", se empaqueta todo el JSON y se envía a Firebase. Simultáneamente, el colegio padre actualiza su `lastSnapshotRisk` para alimentar instantáneamente el Dashboard Principal y acelerar los tiempos de carga.

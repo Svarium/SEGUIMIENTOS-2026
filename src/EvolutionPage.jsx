@@ -91,6 +91,7 @@ function EvolutionPage() {
     const labels = [];
     const vitalityData = [];
     const certificationData = [];
+    const mandatoryCoursesData = [];
 
     snapshots.forEach((s) => {
       // Formatting date
@@ -106,6 +107,7 @@ function EvolutionPage() {
 
       vitalityData.push(s.summary?.digital_vitality_30d_avg ?? null);
       certificationData.push(s.summary?.certification_rate_percent ?? null);
+      mandatoryCoursesData.push(s.summary?.mandatory_courses_full_completion_percent ?? null);
     });
 
     return {
@@ -129,6 +131,16 @@ function EvolutionPage() {
           borderDash: [5, 5],
           tension: 0.4,
           pointBackgroundColor: "rgba(167, 139, 250, 1)",
+          pointRadius: 4,
+        },
+        {
+          label: "Cursos Obligatorios Completos (%)",
+          data: mandatoryCoursesData,
+          borderColor: "rgba(250, 204, 21, 1)", // Amarillo/Dorado
+          backgroundColor: "transparent",
+          borderDash: [2, 2],
+          tension: 0.4,
+          pointBackgroundColor: "rgba(250, 204, 21, 1)",
           pointRadius: 4,
         },
       ],
@@ -463,7 +475,8 @@ function EvolutionPage() {
                       <div className="feed-content">
                         <p className="feed-metrics">
                           Vit: <strong>{s.summary?.digital_vitality_30d_avg?.toFixed(1) || "—"}%</strong> · 
-                          Cert: <strong>{s.summary?.certification_rate_percent?.toFixed(1) || "—"}%</strong>
+                          Cert: <strong>{s.summary?.certification_rate_percent?.toFixed(1) || "—"}%</strong> · 
+                          Cursos Oblig: <strong>{s.summary?.mandatory_courses_full_completion_percent?.toFixed(1) || "—"}%</strong>
                         </p>
                         {fullComment ? (
                            <div className="feed-comment">

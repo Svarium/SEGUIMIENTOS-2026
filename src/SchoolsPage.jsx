@@ -587,6 +587,8 @@ function SchoolsPage() {
           students?.summary?.digital_vitality_30d_avg ?? null,
         recent_progress_15d_avg:
           students?.summary?.recent_progress_15d_avg ?? null,
+        mandatory_courses_full_completion_percent:
+          students?.summary?.mandatory_courses_full_completion_percent ?? null,
       };
 
       const colRef = collection(db, "schools", selectedSchool.id, "snapshots");
@@ -1446,6 +1448,19 @@ function SchoolsPage() {
                 </div>
                 <div className="snapshot-kpi-card">
                   <span className="snapshot-kpi-label">
+                    Cursos oblig. (compl.)
+                  </span>
+                  <span className="snapshot-kpi-value">
+                    {snapshotData.students?.summary
+                      ?.mandatory_courses_full_completion_percent != null
+                      ? `${snapshotData.students.summary.mandatory_courses_full_completion_percent.toFixed(
+                          1
+                        )}%`
+                      : "—"}
+                  </span>
+                </div>
+                <div className="snapshot-kpi-card">
+                  <span className="snapshot-kpi-label">
                     Docentes certificados
                   </span>
                   <span className="snapshot-kpi-value">
@@ -1464,30 +1479,42 @@ function SchoolsPage() {
                   <h5 className="snapshot-subtitle">Grupos de alumnos</h5>
                   {snapshotData.students?.groups?.length ? (
                     <div className="snapshot-table">
-                      <div className="snapshot-table-header">
+                      <div className="snapshot-table-header" style={{ gridTemplateColumns: "2.5fr 0.8fr 2fr 1fr 1fr 1fr 1fr 1fr" }}>
                         <span>Ruta</span>
                         <span>Alumnos</span>
                         <span>Clases</span>
-                        <span>Cursos</span>
-                        <span>Vitalidad</span>
+                        <span>Vit 30d</span>
+                        <span>Prog 30d</span>
+                        <span>Prog 15d</span>
+                        <span>Cursos Ob.</span>
                         <span>Semáforo</span>
                       </div>
                       {snapshotData.students.groups.map((g, idx) => (
-                        <div key={idx} className="snapshot-table-row">
+                        <div key={idx} className="snapshot-table-row" style={{ gridTemplateColumns: "2.5fr 0.8fr 2fr 1fr 1fr 1fr 1fr 1fr" }}>
                           <span>{g.route_name}</span>
                           <span>{g.students_count}</span>
-                          <span>
+                          <span style={{ fontSize: "0.85em", lineHeight: "1.2" }}>
                             {g.metrics?.classes_completion_percent || "—"}
                           </span>
                           <span>
-                            {g.metrics?.courses_completion_percent || "—"}
+                            {g.metrics?.digital_vitality_30d_percent != null
+                              ? `${g.metrics.digital_vitality_30d_percent.toFixed(1)}%`
+                              : "—"}
                           </span>
                           <span>
-                            {g.metrics?.digital_vitality_30d_percent != null
-                              ? `${g.metrics.digital_vitality_30d_percent.toFixed(
-                                  1
-                                )}%`
+                            {g.metrics?.recent_progress_30d_percent != null
+                              ? `${g.metrics.recent_progress_30d_percent.toFixed(1)}%`
                               : "—"}
+                          </span>
+                          <span>
+                            {g.metrics?.recent_progress_15d_percent != null
+                              ? `${g.metrics.recent_progress_15d_percent.toFixed(1)}%`
+                              : "—"}
+                          </span>
+                          <span title={g.metrics?.mandatory_courses_completion_percent || "—"}>
+                            {g.metrics?.mandatory_courses_completion_percent != null
+                                ? `${parseFloat(g.metrics.mandatory_courses_completion_percent).toFixed(1)}%`
+                                : "—"}
                           </span>
                           <span>
                             <div className="status-dots">
