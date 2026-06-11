@@ -1463,13 +1463,15 @@ function SchoolsPage() {
                   <span className="snapshot-kpi-label">
                     Docentes certificados
                   </span>
-                  <span className="snapshot-kpi-value">
-                    {snapshotData.teachers_pld?.summary
-                      ?.certification_rate_percent != null
-                      ? `${snapshotData.teachers_pld.summary.certification_rate_percent.toFixed(
-                          1
-                        )}%`
+                  <span className="snapshot-kpi-value" style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem' }}>
+                    {snapshotData.teachers_pld?.summary?.certified_teachers != null && snapshotData.teachers_pld?.summary?.total_teachers != null
+                      ? `${snapshotData.teachers_pld.summary.certified_teachers} / ${snapshotData.teachers_pld.summary.total_teachers}`
                       : "—"}
+                    {snapshotData.teachers_pld?.summary?.certification_rate_percent != null && (
+                        <span style={{ fontSize: "0.8rem", color: "#9ca3af", fontWeight: "normal" }}>
+                            ({snapshotData.teachers_pld.summary.certification_rate_percent.toFixed(1)}%)
+                        </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -1569,7 +1571,7 @@ function SchoolsPage() {
                               title={
                                 t.plds && t.plds.length
                                   ? t.plds
-                                      .map((p) => p.certification_name)
+                                      .map((p) => p.progress_percent != null ? `${p.certification_name} (${p.progress_percent}%)` : p.certification_name)
                                       .join(" • ")
                                   : undefined
                               }
@@ -1582,7 +1584,7 @@ function SchoolsPage() {
                                 done && t.plds
                                   ? t.plds
                                       .filter((p) => p.certified)
-                                      .map((p) => p.certification_name)
+                                      .map((p) => p.progress_percent != null ? `${p.certification_name} (${p.progress_percent}%)` : p.certification_name)
                                       .join(" • ")
                                   : undefined
                               }

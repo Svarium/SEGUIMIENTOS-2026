@@ -475,7 +475,7 @@ function EvolutionPage() {
                       <div className="feed-content">
                         <p className="feed-metrics">
                           Vit: <strong>{s.summary?.digital_vitality_30d_avg?.toFixed(1) || "—"}%</strong> · 
-                          Cert: <strong>{s.summary?.certification_rate_percent?.toFixed(1) || "—"}%</strong> · 
+                          Cert: <strong>{s.summary?.certified_teachers != null && s.summary?.total_teachers != null ? `${s.summary.certified_teachers}/${s.summary.total_teachers} (${s.summary.certification_rate_percent?.toFixed(1) || "0.0"}%)` : `${s.summary?.certification_rate_percent?.toFixed(1) || "—"}%`}</strong> · 
                           Cursos Oblig: <strong>{s.summary?.mandatory_courses_full_completion_percent?.toFixed(1) || "—"}%</strong>
                         </p>
                         {fullComment ? (
